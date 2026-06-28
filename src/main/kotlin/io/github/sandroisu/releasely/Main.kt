@@ -25,6 +25,11 @@ class ScanCommand : CliktCommand(name = "scan") {
         help = "Path to project directory"
     ).default(".")
 
+    private val baseRef: String by option(
+        "--base-ref",
+        help = "Git ref used as the permission baseline"
+    ).default("HEAD")
+
     override fun run() {
         val result = ProjectDetector().detect(java.nio.file.Path.of(path).toAbsolutePath().normalize())
 
@@ -55,6 +60,37 @@ class ScanCommand : CliktCommand(name = "scan") {
         echo("Permissions: ${permissionScanResult.permissions.size}")
         permissionScanResult.permissions.forEach { permission ->
             echo("- $permission")
+        }
+
+        val baselineResult = GitPermissionBaselineResolver().resolve(
+            projectRoot = result.path,
+            currentManifestFiles = result.manifestFiles,
+            baseRef = baseRef
+        )
+        val findings = if (baselineResult.failureReason == null) {
+            echo("Permission baseline: $baseRef")
+            ManifestPermissionRiskRule().evaluate(
+                currentPermissions = permissionScanResult.permissions,
+                baselinePermissions = baselineResult.permissions
+            )
+        } else {
+            echo("Permission baseline unavailable: ${baselineResult.failureReason}")
+            emptyList()
+        }
+        echo("Findings: ${findings.size}")
+        findings.forEachIndexed { findingIndex, finding ->
+            echo("[${finding.severity}] ${finding.title}")
+            echo("Rule: ${finding.ruleId}")
+            echo("Description: ${finding.description}")
+            echo("Evidence:")
+            finding.evidence.forEach { evidence ->
+                echo("- $evidence")
+            }
+            echo("Recommendation:")
+            echo(finding.recommendation)
+            if (findingIndex < findings.lastIndex) {
+                echo()
+            }
         }
 
         if (permissionScanResult.failedManifestFiles.isNotEmpty()) {

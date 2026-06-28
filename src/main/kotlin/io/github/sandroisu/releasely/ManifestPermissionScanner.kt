@@ -1,6 +1,7 @@
 package io.github.sandroisu.releasely
 
 import org.w3c.dom.Element
+import java.io.ByteArrayInputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import javax.xml.XMLConstants
@@ -39,7 +40,14 @@ class ManifestPermissionScanner {
         )
     }
 
+    fun parsePermissions(manifestContent: ByteArray): List<String> =
+        ByteArrayInputStream(manifestContent).use(::readPermissions)
+
     private fun readPermissions(manifestFile: Path): List<String> {
+        return Files.newInputStream(manifestFile).use(::readPermissions)
+    }
+
+    private fun readPermissions(manifestInput: java.io.InputStream): List<String> {
         val documentBuilderFactory = DocumentBuilderFactory.newInstance().apply {
             isNamespaceAware = true
             setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true)
@@ -47,7 +55,7 @@ class ManifestPermissionScanner {
 
         val document = documentBuilderFactory
             .newDocumentBuilder()
-            .parse(manifestFile.toFile())
+            .parse(manifestInput)
 
         val usesPermissionNodes = document.getElementsByTagName("uses-permission")
         val permissions = mutableListOf<String>()
