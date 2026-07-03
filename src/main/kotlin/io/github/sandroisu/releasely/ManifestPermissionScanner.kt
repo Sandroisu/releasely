@@ -4,8 +4,6 @@ import org.w3c.dom.Element
 import java.io.ByteArrayInputStream
 import java.nio.file.Files
 import java.nio.file.Path
-import javax.xml.XMLConstants
-import javax.xml.parsers.DocumentBuilderFactory
 
 data class ManifestPermissionScanResult(
     val scannedManifestCount: Int,
@@ -48,12 +46,7 @@ class ManifestPermissionScanner {
     }
 
     private fun readPermissions(manifestInput: java.io.InputStream): List<String> {
-        val documentBuilderFactory = DocumentBuilderFactory.newInstance().apply {
-            isNamespaceAware = true
-            setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true)
-        }
-
-        val document = documentBuilderFactory
+        val document = secureDocumentBuilderFactory()
             .newDocumentBuilder()
             .parse(manifestInput)
 

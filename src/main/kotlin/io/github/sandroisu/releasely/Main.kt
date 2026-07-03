@@ -56,6 +56,20 @@ class ScanCommand : CliktCommand(name = "scan") {
             echo("- ... and ${result.manifestFiles.size - 20} more")
         }
         val permissionScanResult = ManifestPermissionScanner().scan(result.manifestFiles)
+        val componentScanResult = ManifestComponentScanner().scan(result.manifestFiles)
+
+        echo("Manifest components: ${componentScanResult.components.size}")
+        echo("- activities: ${componentScanResult.count(ManifestComponentType.ACTIVITY)}")
+        echo("- activity aliases: ${componentScanResult.count(ManifestComponentType.ACTIVITY_ALIAS)}")
+        echo("- services: ${componentScanResult.count(ManifestComponentType.SERVICE)}")
+        echo("- receivers: ${componentScanResult.count(ManifestComponentType.RECEIVER)}")
+        echo("- providers: ${componentScanResult.count(ManifestComponentType.PROVIDER)}")
+        if (componentScanResult.failedManifestFiles.isNotEmpty()) {
+            echo("Failed component manifest files: ${componentScanResult.failedManifestFiles.size}")
+            componentScanResult.failedManifestFiles.take(10).forEach { manifestFile ->
+                echo("- ${result.path.relativize(manifestFile)}")
+            }
+        }
 
         echo("Permissions: ${permissionScanResult.permissions.size}")
         permissionScanResult.permissions.forEach { permission ->
@@ -70,9 +84,18 @@ class ScanCommand : CliktCommand(name = "scan") {
         val findings = if (baselineResult.failureReason == null) {
             echo("Permission baseline: $baseRef")
             val baselinePermissions = baselineResult.permissions.toSet()
+            val newPermissions = permissionScanResult.permissions.filterNot(baselinePermissions::contains)
+            echo("New permissions since baseline: ${newPermissions.size}")
+            echo("Baseline permissions: ${baselineResult.permissions.size}")
+            if (newPermissions.isNotEmpty()) {
+                echo("New permissions:")
+                newPermissions.forEach { permission ->
+                    echo("- $permission")
+                }
+            }
             val releaseRuleContext = ReleaseRuleContext(
                 projectPath = result.path,
-                permissions = permissionScanResult.permissions.filterNot(baselinePermissions::contains)
+                permissions = newPermissions
             )
             val releaseRules: List<ReleaseRule> = listOf(
                 ManifestPermissionRiskRule(),
@@ -86,6 +109,7 @@ class ScanCommand : CliktCommand(name = "scan") {
             echo("Permission baseline unavailable: ${baselineResult.failureReason}")
             emptyList()
         }
+        echo("Findings are based on new permissions since baseline.")
         echo("Findings: ${findings.size}")
         findings.forEachIndexed { findingIndex, finding ->
             echo("[${finding.severity}] ${finding.title}")
@@ -116,6 +140,9 @@ class ScanCommand : CliktCommand(name = "scan") {
         } else {
             "no"
         }
+
+    private fun ManifestComponentScanResult.count(type: ManifestComponentType): Int =
+        components.count { component -> component.type == type }
 }
 
 
