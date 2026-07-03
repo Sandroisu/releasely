@@ -1,18 +1,11 @@
 package io.github.sandroisu.releasely
 
-class ManifestPermissionRiskRule {
+class ManifestPermissionRiskRule : ReleaseRule {
 
-    fun evaluate(
-        currentPermissions: List<String>,
-        baselinePermissions: List<String>
-    ): List<ReleaseFinding> {
-        val baselinePermissionSet = baselinePermissions.toSet()
-
-        return currentPermissions
+    override fun evaluate(context: ReleaseRuleContext): List<ReleaseFinding> =
+        context.permissions
             .distinct()
-            .filterNot(baselinePermissionSet::contains)
             .mapNotNull(::findingFor)
-    }
 
     private fun findingFor(permission: String): ReleaseFinding? =
         when (permission) {

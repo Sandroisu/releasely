@@ -1,8 +1,8 @@
 package io.github.sandroisu.releasely
 
+import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 class ManifestPermissionRiskRuleTest {
 
@@ -11,11 +11,13 @@ class ManifestPermissionRiskRuleTest {
     @Test
     fun `returns a finding when sensitive permission was added`() {
         val findings = rule.evaluate(
-            currentPermissions = listOf(
-                "android.permission.INTERNET",
-                "android.permission.ACCESS_BACKGROUND_LOCATION"
-            ),
-            baselinePermissions = listOf("android.permission.INTERNET")
+            ReleaseRuleContext(
+                projectPath = Path.of("."),
+                permissions = listOf(
+                    "android.permission.INTERNET",
+                    "android.permission.ACCESS_BACKGROUND_LOCATION"
+                )
+            )
         )
 
         assertEquals(1, findings.size)
@@ -24,29 +26,33 @@ class ManifestPermissionRiskRuleTest {
     }
 
     @Test
-    fun `does not report a sensitive permission already present in baseline`() {
-        val permission = "android.permission.SYSTEM_ALERT_WINDOW"
+    fun `returns a finding through release rule interface`() {
+        val releaseRule: ReleaseRule = rule
 
-        val findings = rule.evaluate(
-            currentPermissions = listOf(permission),
-            baselinePermissions = listOf(permission)
+        val findings = releaseRule.evaluate(
+            ReleaseRuleContext(
+                projectPath = Path.of("."),
+                permissions = listOf("android.permission.SYSTEM_ALERT_WINDOW")
+            )
         )
 
-        assertTrue(findings.isEmpty())
+        assertEquals("manifest.permission.system_alert_window", findings.single().ruleId)
     }
 
     @Test
     fun `returns findings for supported added permissions only`() {
         val findings = rule.evaluate(
-            currentPermissions = listOf(
-                "android.permission.POST",
-                "android.permission.SYSTEM_ALERT_WINDOW",
-                "android.permission.ACCESS_BACKGROUND_LOCATION",
-                "android.permission.READ_EXTERNAL_STORAGE",
-                "android.permission.WRITE_EXTERNAL_STORAGE",
-                "android.permission.WRITE_EXTERNAL_STORAGE"
-            ),
-            baselinePermissions = emptyList()
+            ReleaseRuleContext(
+                projectPath = Path.of("."),
+                permissions = listOf(
+                    "android.permission.POST",
+                    "android.permission.SYSTEM_ALERT_WINDOW",
+                    "android.permission.ACCESS_BACKGROUND_LOCATION",
+                    "android.permission.READ_EXTERNAL_STORAGE",
+                    "android.permission.WRITE_EXTERNAL_STORAGE",
+                    "android.permission.WRITE_EXTERNAL_STORAGE"
+                )
+            )
         )
 
         assertEquals(4, findings.size)

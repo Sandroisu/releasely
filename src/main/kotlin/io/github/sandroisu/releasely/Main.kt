@@ -69,10 +69,19 @@ class ScanCommand : CliktCommand(name = "scan") {
         )
         val findings = if (baselineResult.failureReason == null) {
             echo("Permission baseline: $baseRef")
-            ManifestPermissionRiskRule().evaluate(
-                currentPermissions = permissionScanResult.permissions,
-                baselinePermissions = baselineResult.permissions
+            val baselinePermissions = baselineResult.permissions.toSet()
+            val releaseRuleContext = ReleaseRuleContext(
+                projectPath = result.path,
+                permissions = permissionScanResult.permissions.filterNot(baselinePermissions::contains)
             )
+            val releaseRules: List<ReleaseRule> = listOf(
+                ManifestPermissionRiskRule(),
+                DangerousPermissionRule()
+            )
+
+            releaseRules.flatMap { releaseRule ->
+                releaseRule.evaluate(releaseRuleContext)
+            }
         } else {
             echo("Permission baseline unavailable: ${baselineResult.failureReason}")
             emptyList()
