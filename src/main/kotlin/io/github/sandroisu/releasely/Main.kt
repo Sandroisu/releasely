@@ -101,7 +101,8 @@ class ScanCommand : CliktCommand(name = "scan") {
             val releaseRules: List<ReleaseRule> = listOf(
                 ManifestPermissionRiskRule(),
                 DangerousPermissionRule(),
-                ExportedComponentRule()
+                ExportedComponentRule(),
+                MissingExportedWithIntentFilterRule()
             )
 
             releaseRules.flatMap { releaseRule ->
