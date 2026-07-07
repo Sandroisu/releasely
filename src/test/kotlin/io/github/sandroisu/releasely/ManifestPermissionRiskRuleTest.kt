@@ -16,7 +16,8 @@ class ManifestPermissionRiskRuleTest {
                 permissions = listOf(
                     "android.permission.INTERNET",
                     "android.permission.ACCESS_BACKGROUND_LOCATION"
-                )
+                ),
+                manifestComponents = emptyList()
             )
         )
 
@@ -32,7 +33,8 @@ class ManifestPermissionRiskRuleTest {
         val findings = releaseRule.evaluate(
             ReleaseRuleContext(
                 projectPath = Path.of("."),
-                permissions = listOf("android.permission.SYSTEM_ALERT_WINDOW")
+                permissions = listOf("android.permission.SYSTEM_ALERT_WINDOW"),
+                manifestComponents = emptyList()
             )
         )
 
@@ -51,7 +53,8 @@ class ManifestPermissionRiskRuleTest {
                     "android.permission.READ_EXTERNAL_STORAGE",
                     "android.permission.WRITE_EXTERNAL_STORAGE",
                     "android.permission.WRITE_EXTERNAL_STORAGE"
-                )
+                ),
+                manifestComponents = emptyList()
             )
         )
 

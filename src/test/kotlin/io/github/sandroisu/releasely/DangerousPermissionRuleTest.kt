@@ -53,6 +53,7 @@ class DangerousPermissionRuleTest {
     private fun contextWith(vararg permissions: String): ReleaseRuleContext =
         ReleaseRuleContext(
             projectPath = Path.of("."),
-            permissions = permissions.toList()
+            permissions = permissions.toList(),
+            manifestComponents = emptyList()
         )
 }

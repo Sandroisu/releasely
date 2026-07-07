@@ -4,7 +4,8 @@ import java.nio.file.Path
 
 data class ReleaseRuleContext(
     val projectPath: Path,
-    val permissions: List<String>
+    val permissions: List<String>,
+    val manifestComponents: List<ManifestComponent>
 )
 
 fun interface ReleaseRule {

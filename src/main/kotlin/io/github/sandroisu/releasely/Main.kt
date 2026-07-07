@@ -95,11 +95,13 @@ class ScanCommand : CliktCommand(name = "scan") {
             }
             val releaseRuleContext = ReleaseRuleContext(
                 projectPath = result.path,
-                permissions = newPermissions
+                permissions = newPermissions,
+                manifestComponents = componentScanResult.components
             )
             val releaseRules: List<ReleaseRule> = listOf(
                 ManifestPermissionRiskRule(),
-                DangerousPermissionRule()
+                DangerousPermissionRule(),
+                ExportedComponentRule()
             )
 
             releaseRules.flatMap { releaseRule ->
