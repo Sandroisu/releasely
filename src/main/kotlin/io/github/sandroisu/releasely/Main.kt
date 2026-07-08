@@ -116,13 +116,15 @@ class ScanCommand : CliktCommand(name = "scan") {
             val releaseRuleContext = ReleaseRuleContext(
                 projectPath = result.path,
                 permissions = newPermissions,
-                manifestComponents = componentScanResult.components
+                manifestComponents = componentScanResult.components,
+                gradleAndroidConfigs = gradleConfigScanResult.configs
             )
             val releaseRules: List<ReleaseRule> = listOf(
                 ManifestPermissionRiskRule(),
                 DangerousPermissionRule(),
                 ExportedComponentRule(),
-                MissingExportedWithIntentFilterRule()
+                MissingExportedWithIntentFilterRule(),
+                MinifyDisabledReleaseRule()
             )
 
             releaseRules.flatMap { releaseRule ->
@@ -135,6 +137,7 @@ class ScanCommand : CliktCommand(name = "scan") {
         echo("Finding scope:")
         echo("- Permission rules: new permissions since baseline")
         echo("- Manifest component rules: all manifest components")
+        echo("- Gradle rules: all detected Android Gradle configs")
         echo("Findings: ${findings.size}")
         echoFindingsBySeverity(findings)
         echoFindingsByRule(findings)
