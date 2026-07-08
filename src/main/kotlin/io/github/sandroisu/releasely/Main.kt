@@ -114,6 +114,7 @@ class ScanCommand : CliktCommand(name = "scan") {
         }
         echo("Findings are based on new permissions since baseline.")
         echo("Findings: ${findings.size}")
+        echoFindingsByRule(findings)
         findings.forEachIndexed { findingIndex, finding ->
             echo("[${finding.severity}] ${finding.title}")
             echo("Rule: ${finding.ruleId}")
@@ -143,6 +144,21 @@ class ScanCommand : CliktCommand(name = "scan") {
         } else {
             "no"
         }
+
+    private fun echoFindingsByRule(findings: List<ReleaseFinding>) {
+        if (findings.isEmpty()) {
+            return
+        }
+
+        echo("Findings by rule:")
+        findings
+            .groupingBy(ReleaseFinding::ruleId)
+            .eachCount()
+            .toSortedMap()
+            .forEach { (ruleId, count) ->
+                echo("$ruleId: $count")
+            }
+    }
 
     private fun ManifestComponentScanResult.count(type: ManifestComponentType): Int =
         components.count { component -> component.type == type }
