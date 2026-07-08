@@ -112,7 +112,9 @@ class ScanCommand : CliktCommand(name = "scan") {
             echo("Permission baseline unavailable: ${baselineResult.failureReason}")
             emptyList()
         }
-        echo("Findings are based on new permissions since baseline.")
+        echo("Finding scope:")
+        echo("- Permission rules: new permissions since baseline")
+        echo("- Manifest component rules: all manifest components")
         echo("Findings: ${findings.size}")
         echoFindingsByRule(findings)
         findings.forEachIndexed { findingIndex, finding ->
@@ -156,7 +158,7 @@ class ScanCommand : CliktCommand(name = "scan") {
             .eachCount()
             .toSortedMap()
             .forEach { (ruleId, count) ->
-                echo("$ruleId: $count")
+                echo("- $ruleId: $count")
             }
     }
 
