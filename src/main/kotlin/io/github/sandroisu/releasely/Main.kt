@@ -116,6 +116,7 @@ class ScanCommand : CliktCommand(name = "scan") {
         echo("- Permission rules: new permissions since baseline")
         echo("- Manifest component rules: all manifest components")
         echo("Findings: ${findings.size}")
+        echoFindingsBySeverity(findings)
         echoFindingsByRule(findings)
         findings.forEachIndexed { findingIndex, finding ->
             echo("[${finding.severity}] ${finding.title}")
@@ -146,6 +147,24 @@ class ScanCommand : CliktCommand(name = "scan") {
         } else {
             "no"
         }
+
+    private fun echoFindingsBySeverity(findings: List<ReleaseFinding>) {
+        if (findings.isEmpty()) {
+            return
+        }
+
+        val findingsBySeverity = findings.groupingBy(ReleaseFinding::severity).eachCount()
+        echo("Findings by severity:")
+        listOf(
+            ReleaseFindingSeverity.HIGH,
+            ReleaseFindingSeverity.MEDIUM,
+            ReleaseFindingSeverity.LOW,
+            ReleaseFindingSeverity.INFO
+        ).forEach { severity ->
+            val count = findingsBySeverity[severity] ?: return@forEach
+            echo("- $severity: $count")
+        }
+    }
 
     private fun echoFindingsByRule(findings: List<ReleaseFinding>) {
         if (findings.isEmpty()) {
