@@ -249,6 +249,27 @@ class GradleAndroidConfigScannerTest {
     }
 
     @Test
+    fun doesNotUseGroovyDebugMinifyEnabledAsReleaseMinifyEnabled() = withGradleFile(
+        fileName = "build.gradle",
+        content = """
+            plugins {
+                id 'com.android.application'
+            }
+            android {
+                buildTypes {
+                    debug {
+                        minifyEnabled false
+                    }
+                }
+            }
+        """.trimIndent()
+    ) { result ->
+        val config = result.configs.single()
+        assertEquals(false, config.minifyEnabled)
+        assertNull(config.releaseMinifyEnabled)
+    }
+
+    @Test
     fun detectsKotlinDslAndroidApplicationPlugin() = withGradleFile(
         fileName = "build.gradle.kts",
         content = """
