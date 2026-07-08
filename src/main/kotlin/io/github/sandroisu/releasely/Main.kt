@@ -55,6 +55,26 @@ class ScanCommand : CliktCommand(name = "scan") {
         if (result.manifestFiles.size > 20) {
             echo("- ... and ${result.manifestFiles.size - 20} more")
         }
+        val gradleConfigScanResult = GradleAndroidConfigScanner().scan(result.gradleFiles)
+        echo("Gradle Android configs: ${gradleConfigScanResult.configs.size}")
+        echo("- Android application modules: ${gradleConfigScanResult.count(AndroidPluginType.APPLICATION)}")
+        echo("- Android library modules: ${gradleConfigScanResult.count(AndroidPluginType.LIBRARY)}")
+        echo("- Android dynamic feature modules: ${gradleConfigScanResult.count(AndroidPluginType.DYNAMIC_FEATURE)}")
+        echo("- Android test modules: ${gradleConfigScanResult.count(AndroidPluginType.TEST)}")
+        echo("- unknown Android modules: ${gradleConfigScanResult.count(AndroidPluginType.UNKNOWN_ANDROID)}")
+        echo("- configs with namespace: ${gradleConfigScanResult.count { config -> config.namespace != null }}")
+        echo("- configs with compileSdk: ${gradleConfigScanResult.count { config -> config.compileSdk != null }}")
+        echo("- configs with minSdk: ${gradleConfigScanResult.count { config -> config.minSdk != null }}")
+        echo("- configs with targetSdk: ${gradleConfigScanResult.count { config -> config.targetSdk != null }}")
+        echo("- configs with versionCode: ${gradleConfigScanResult.count { config -> config.versionCode != null }}")
+        echo("- configs with minifyEnabled: ${gradleConfigScanResult.count { config -> config.minifyEnabled != null }}")
+        echo("- configs with shrinkResources: ${gradleConfigScanResult.count { config -> config.shrinkResources != null }}")
+        if (gradleConfigScanResult.failedGradleFiles.isNotEmpty()) {
+            echo("Failed Gradle files: ${gradleConfigScanResult.failedGradleFiles.size}")
+            gradleConfigScanResult.failedGradleFiles.take(10).forEach { gradleFile ->
+                echo("- ${result.path.relativize(gradleFile)}")
+            }
+        }
         val permissionScanResult = ManifestPermissionScanner().scan(result.manifestFiles)
         val componentScanResult = ManifestComponentScanner().scan(result.manifestFiles)
 
@@ -183,6 +203,12 @@ class ScanCommand : CliktCommand(name = "scan") {
 
     private fun ManifestComponentScanResult.count(type: ManifestComponentType): Int =
         components.count { component -> component.type == type }
+
+    private fun GradleAndroidConfigScanResult.count(pluginType: AndroidPluginType): Int =
+        configs.count { config -> config.androidPluginType == pluginType }
+
+    private fun GradleAndroidConfigScanResult.count(predicate: (GradleAndroidConfig) -> Boolean): Int =
+        configs.count(predicate)
 }
 
 

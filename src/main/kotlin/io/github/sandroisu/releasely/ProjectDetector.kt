@@ -15,6 +15,7 @@ data class ProjectDetectionResult(
     val isDirectory: Boolean,
     val isGradleProject: Boolean,
     val isAndroidProject: Boolean,
+    val gradleFiles: List<Path>,
     val androidEvidence: List<Path>,
     val manifestFiles: List<Path>,
 )
@@ -42,17 +43,23 @@ class ProjectDetector {
                 isDirectory = isDirectory,
                 isGradleProject = false,
                 isAndroidProject = false,
+                gradleFiles = emptyList(),
                 androidEvidence = emptyList(),
                 manifestFiles = emptyList(),
             )
         }
         val gradleFiles = findGradleFiles(path)
+        val androidEvidenceFiles = gradleFiles.filter { file ->
+            file.name == "build.gradle" ||
+                file.name == "build.gradle.kts" ||
+                file.name == "libs.versions.toml"
+        }
         val isGradleProject =
             Files.exists(path.resolve("settings.gradle")) ||
                     Files.exists(path.resolve("settings.gradle.kts")) ||
                     gradleFiles.isNotEmpty()
 
-        val androidEvidence = gradleFiles.filter { file ->
+        val androidEvidence = androidEvidenceFiles.filter { file ->
             val text = readTextOrEmpty(file)
             text.contains("com.android.") ||
                     text.contains("alias(libs.plugins.android") ||
@@ -67,6 +74,7 @@ class ProjectDetector {
             isDirectory = true,
             isGradleProject = isGradleProject,
             isAndroidProject = androidEvidence.isNotEmpty(),
+            gradleFiles = gradleFiles,
             androidEvidence = androidEvidence,
             manifestFiles = manifestFiles,
         )
@@ -83,6 +91,8 @@ class ProjectDetector {
         findFiles(root, maxDepth = 8) { file ->
             file.name == "build.gradle" ||
                     file.name == "build.gradle.kts" ||
+                    file.name == "settings.gradle" ||
+                    file.name == "settings.gradle.kts" ||
                     file.name == "libs.versions.toml"
         }
 
