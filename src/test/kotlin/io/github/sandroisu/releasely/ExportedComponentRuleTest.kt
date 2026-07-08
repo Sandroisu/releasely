@@ -39,6 +39,7 @@ class ExportedComponentRuleTest {
 
         assertEquals("manifest.component.exported.activity", finding.ruleId)
         assertEquals(ReleaseFindingSeverity.MEDIUM, finding.severity)
+        assertEquals("src/main/AndroidManifest.xml", finding.locationPath?.replace('\\', '/'))
     }
 
     @Test

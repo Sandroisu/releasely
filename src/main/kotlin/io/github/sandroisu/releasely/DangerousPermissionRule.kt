@@ -34,7 +34,8 @@ class DangerousPermissionRule : ReleaseRule {
             title = "Dangerous permission detected",
             description = "Android manifest declares $permission. This permission can affect runtime permission flow, QA scope, and store privacy review.",
             evidence = listOf(permission),
-            recommendation = "Verify that this permission is required, covered by runtime permission UX, tested in release QA, and reflected in privacy declarations if applicable."
+            recommendation = "Verify that this permission is required, covered by runtime permission UX, tested in release QA, and reflected in privacy declarations if applicable.",
+            locationPath = null
         )
     }
 }

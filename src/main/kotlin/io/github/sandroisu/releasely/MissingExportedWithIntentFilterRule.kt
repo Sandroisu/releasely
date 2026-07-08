@@ -22,7 +22,8 @@ class MissingExportedWithIntentFilterRule : ReleaseRule {
                 }
                 add("Manifest file: ${component.manifestFile}")
             },
-            recommendation = "Declare android:exported explicitly. Use android:exported=\"true\" only if the component must be accessible from other apps; otherwise use android:exported=\"false\"."
+            recommendation = "Declare android:exported explicitly. Use android:exported=\"true\" only if the component must be accessible from other apps; otherwise use android:exported=\"false\".",
+            locationPath = component.manifestFile.toString()
         )
 
     private fun ManifestComponentType.ruleIdSuffix(): String =

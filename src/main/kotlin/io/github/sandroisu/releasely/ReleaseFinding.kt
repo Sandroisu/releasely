@@ -13,5 +13,6 @@ data class ReleaseFinding(
     val title: String,
     val description: String,
     val evidence: List<String>,
-    val recommendation: String
+    val recommendation: String,
+    val locationPath: String? = null
 )

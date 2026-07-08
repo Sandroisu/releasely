@@ -20,7 +20,8 @@ class ExportedComponentRule : ReleaseRule {
                 }
                 add("Manifest file: ${component.manifestFile}")
             },
-            recommendation = "Verify that this component must be exported, has the expected intent filters, is protected when needed, and is covered by release QA."
+            recommendation = "Verify that this component must be exported, has the expected intent filters, is protected when needed, and is covered by release QA.",
+            locationPath = component.manifestFile.toString()
         )
 
     private fun ManifestComponentType.ruleIdSuffix(): String =

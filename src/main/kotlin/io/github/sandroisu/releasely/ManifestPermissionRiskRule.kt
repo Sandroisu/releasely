@@ -15,7 +15,8 @@ class ManifestPermissionRiskRule : ReleaseRule {
                 title = "Sensitive overlay permission added",
                 description = "This change adds SYSTEM_ALERT_WINDOW, which requires strong justification and may affect review and security.",
                 evidence = listOf(permission),
-                recommendation = "Confirm that drawing over other apps is essential and review the permission's security and store-policy impact."
+                recommendation = "Confirm that drawing over other apps is essential and review the permission's security and store-policy impact.",
+                locationPath = null
             )
 
             "android.permission.ACCESS_BACKGROUND_LOCATION" -> ReleaseFinding(
@@ -24,7 +25,8 @@ class ManifestPermissionRiskRule : ReleaseRule {
                 title = "Background location permission added",
                 description = "This change adds privacy-sensitive background location access.",
                 evidence = listOf(permission),
-                recommendation = "Verify the background location use case, user disclosure, runtime flow, and store-policy compliance."
+                recommendation = "Verify the background location use case, user disclosure, runtime flow, and store-policy compliance.",
+                locationPath = null
             )
 
             "android.permission.READ_EXTERNAL_STORAGE" -> legacyStorageFinding(permission)
@@ -42,6 +44,7 @@ class ManifestPermissionRiskRule : ReleaseRule {
             title = "Legacy storage permission added",
             description = "This change adds a legacy storage permission whose behavior depends on targetSdk and scoped storage.",
             evidence = listOf(permission),
-            recommendation = "Check whether the permission is still needed for the targetSdk and migrate to scoped storage APIs where possible."
+            recommendation = "Check whether the permission is still needed for the targetSdk and migrate to scoped storage APIs where possible.",
+            locationPath = null
         )
 }

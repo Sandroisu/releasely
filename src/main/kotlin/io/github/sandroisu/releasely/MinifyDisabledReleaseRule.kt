@@ -19,7 +19,8 @@ class MinifyDisabledReleaseRule : ReleaseRule {
                         "Android plugin type: ${config.androidPluginType ?: "unknown"}",
                         "releaseMinifyEnabled=false"
                     ),
-                    recommendation = "Verify that the application release build is intentionally published without R8/minification. If this is not intended, enable minification for the release build type."
+                    recommendation = "Verify that the application release build is intentionally published without R8/minification. If this is not intended, enable minification for the release build type.",
+                    locationPath = config.gradleFile.toString()
                 )
             }
 }

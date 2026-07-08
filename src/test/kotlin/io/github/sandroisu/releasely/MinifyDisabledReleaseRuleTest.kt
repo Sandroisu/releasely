@@ -26,6 +26,7 @@ class MinifyDisabledReleaseRuleTest {
         assertEquals(ReleaseFindingSeverity.MEDIUM, finding.severity)
         assertEquals("Release minification appears disabled", finding.title)
         assertTrue(finding.evidence.contains("releaseMinifyEnabled=false"))
+        assertEquals("app/build.gradle.kts", finding.locationPath?.replace('\\', '/'))
     }
 
     @Test
