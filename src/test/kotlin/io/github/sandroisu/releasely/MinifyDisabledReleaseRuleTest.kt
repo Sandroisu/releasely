@@ -93,6 +93,54 @@ class MinifyDisabledReleaseRuleTest {
     }
 
     @Test
+    fun ignoresDynamicFeatureModuleWithReleaseMinifyDisabled() {
+        val findings = rule.evaluate(
+            contextWith(
+                config(
+                    androidPluginType = AndroidPluginType.DYNAMIC_FEATURE,
+                    hasAndroidPlugin = true,
+                    minifyEnabled = false,
+                    releaseMinifyEnabled = false
+                )
+            )
+        )
+
+        assertTrue(findings.isEmpty())
+    }
+
+    @Test
+    fun ignoresTestModuleWithReleaseMinifyDisabled() {
+        val findings = rule.evaluate(
+            contextWith(
+                config(
+                    androidPluginType = AndroidPluginType.TEST,
+                    hasAndroidPlugin = true,
+                    minifyEnabled = false,
+                    releaseMinifyEnabled = false
+                )
+            )
+        )
+
+        assertTrue(findings.isEmpty())
+    }
+
+    @Test
+    fun ignoresUnknownAndroidModuleWithReleaseMinifyDisabled() {
+        val findings = rule.evaluate(
+            contextWith(
+                config(
+                    androidPluginType = AndroidPluginType.UNKNOWN_ANDROID,
+                    hasAndroidPlugin = true,
+                    minifyEnabled = false,
+                    releaseMinifyEnabled = false
+                )
+            )
+        )
+
+        assertTrue(findings.isEmpty())
+    }
+
+    @Test
     fun canBeUsedThroughReleaseRuleInterface() {
         val releaseRule: ReleaseRule = rule
 
