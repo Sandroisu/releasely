@@ -437,6 +437,48 @@ class GradleAndroidConfigScannerTest {
         assertNull(config.releaseMinifyEnabled)
     }
 
+    @Test
+    fun doesNotUseStagingMinifyEnabledAsReleaseMinifyEnabled() = withGradleFile(
+        fileName = "build.gradle.kts",
+        content = """
+            plugins {
+                id("com.android.application")
+            }
+            android {
+                buildTypes {
+                    staging {
+                        isMinifyEnabled = false
+                    }
+                }
+            }
+        """.trimIndent()
+    ) { result ->
+        val config = result.configs.single()
+        assertEquals(false, config.minifyEnabled)
+        assertNull(config.releaseMinifyEnabled)
+    }
+
+    @Test
+    fun doesNotUseReleaseCandidateMinifyEnabledAsReleaseMinifyEnabled() = withGradleFile(
+        fileName = "build.gradle.kts",
+        content = """
+            plugins {
+                id("com.android.application")
+            }
+            android {
+                buildTypes {
+                    releaseCandidate {
+                        isMinifyEnabled = false
+                    }
+                }
+            }
+        """.trimIndent()
+    ) { result ->
+        val config = result.configs.single()
+        assertEquals(false, config.minifyEnabled)
+        assertNull(config.releaseMinifyEnabled)
+    }
+
     private fun withGradleFile(
         fileName: String,
         content: String,
