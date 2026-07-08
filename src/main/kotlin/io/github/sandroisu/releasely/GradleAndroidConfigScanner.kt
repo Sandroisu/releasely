@@ -38,6 +38,7 @@ class GradleAndroidConfigScanner {
         )
 
         private val defaultConfigHeader = Regex("""\bdefaultConfig\s*\{""")
+        private val buildTypesHeader = Regex("""\bbuildTypes\s*\{""")
         private val releaseHeader = Regex(
             """(?:\brelease\b|getByName\(\s*"release"\s*\)|named\(\s*"release"\s*\)|create\(\s*"release"\s*\)|maybeCreate\(\s*"release"\s*\))\s*\{"""
         )
@@ -79,7 +80,10 @@ class GradleAndroidConfigScanner {
         }
 
         val defaultConfigBlock = extractBlock(fileContent, defaultConfigHeader)
-        val releaseBlock = extractBlock(fileContent, releaseHeader)
+        val buildTypesBlock = extractBlock(fileContent, buildTypesHeader)
+        val releaseBuildTypeBlock = buildTypesBlock?.let { buildTypesText ->
+            extractBlock(buildTypesText, releaseHeader)
+        }
 
         val config = GradleAndroidConfig(
             gradleFile = gradleFile,
@@ -92,13 +96,15 @@ class GradleAndroidConfigScanner {
             targetSdk = extractInt("targetSdk", defaultConfigBlock, fileContent),
             versionCode = extractInt("versionCode", defaultConfigBlock, fileContent),
             versionName = extractString("versionName", defaultConfigBlock, fileContent),
-            minifyEnabled = extractBoolean("minifyEnabled", releaseBlock ?: fileContent),
-            shrinkResources = extractBoolean("shrinkResources", releaseBlock ?: fileContent)
+            minifyEnabled = extractBoolean("minifyEnabled", releaseBuildTypeBlock ?: fileContent),
+            shrinkResources = extractBoolean("shrinkResources", releaseBuildTypeBlock ?: fileContent),
+            releaseMinifyEnabled = extractBooleanOrNull("minifyEnabled", releaseBuildTypeBlock),
+            releaseShrinkResources = extractBooleanOrNull("shrinkResources", releaseBuildTypeBlock)
         )
 
         return config.takeIf { parsedConfig ->
             parsedConfig.hasAndroidPlugin ||
-            parsedConfig.applicationId != null ||
+                parsedConfig.applicationId != null ||
                 parsedConfig.namespace != null ||
                 parsedConfig.compileSdk != null ||
                 parsedConfig.minSdk != null ||
@@ -106,7 +112,9 @@ class GradleAndroidConfigScanner {
                 parsedConfig.versionCode != null ||
                 parsedConfig.versionName != null ||
                 parsedConfig.minifyEnabled != null ||
-                parsedConfig.shrinkResources != null
+                parsedConfig.shrinkResources != null ||
+                parsedConfig.releaseMinifyEnabled != null ||
+                parsedConfig.releaseShrinkResources != null
         }
     }
 
@@ -188,6 +196,17 @@ class GradleAndroidConfigScanner {
             ?.groupValues
             ?.getOrNull(1)
             ?.toBooleanStrictOrNull()
+
+    private fun extractBooleanOrNull(propertyName: String, text: String?): Boolean? =
+        text?.let(::normalizeBooleanSource)?.let(booleanAssignmentPatterns.getValue(propertyName)::find)
+            ?.groupValues
+            ?.getOrNull(1)
+            ?.toBooleanStrictOrNull()
+
+    private fun normalizeBooleanSource(text: String): String =
+        text.lineSequence()
+            .map(String::trim)
+            .joinToString("\n")
 
     private fun extractBlock(text: String, headerPattern: Regex): String? {
         val match = headerPattern.find(text) ?: return null

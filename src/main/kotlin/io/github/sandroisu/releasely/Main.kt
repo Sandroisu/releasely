@@ -69,6 +69,8 @@ class ScanCommand : CliktCommand(name = "scan") {
         echo("- configs with versionCode: ${gradleConfigScanResult.count { config -> config.versionCode != null }}")
         echo("- configs with minifyEnabled: ${gradleConfigScanResult.count { config -> config.minifyEnabled != null }}")
         echo("- configs with shrinkResources: ${gradleConfigScanResult.count { config -> config.shrinkResources != null }}")
+        echo("- configs with release minifyEnabled: ${gradleConfigScanResult.count { config -> config.releaseMinifyEnabled != null }}")
+        echo("- configs with release shrinkResources: ${gradleConfigScanResult.count { config -> config.releaseShrinkResources != null }}")
         if (gradleConfigScanResult.failedGradleFiles.isNotEmpty()) {
             echo("Failed Gradle files: ${gradleConfigScanResult.failedGradleFiles.size}")
             gradleConfigScanResult.failedGradleFiles.take(10).forEach { gradleFile ->

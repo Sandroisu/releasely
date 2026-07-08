@@ -6,7 +6,7 @@ class MinifyDisabledReleaseRule : ReleaseRule {
         context.gradleAndroidConfigs
             .filter { config ->
                 config.androidPluginType == AndroidPluginType.APPLICATION &&
-                    config.minifyEnabled == false
+                    config.releaseMinifyEnabled == false
             }
             .map { config ->
                 ReleaseFinding(
@@ -17,7 +17,7 @@ class MinifyDisabledReleaseRule : ReleaseRule {
                     evidence = listOf(
                         "Gradle file: ${config.gradleFile}",
                         "Android plugin type: ${config.androidPluginType ?: "unknown"}",
-                        "minifyEnabled=false"
+                        "releaseMinifyEnabled=false"
                     ),
                     recommendation = "Verify that the application release build is intentionally published without R8/minification. If this is not intended, enable minification for the release build type."
                 )

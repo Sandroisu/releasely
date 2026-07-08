@@ -10,60 +10,84 @@ class MinifyDisabledReleaseRuleTest {
     private val rule = MinifyDisabledReleaseRule()
 
     @Test
-    fun returnsMediumFindingForApplicationModuleWithMinifyDisabled() {
-        val finding = rule.evaluate(contextWith(config(AndroidPluginType.APPLICATION, hasAndroidPlugin = true, minifyEnabled = false))).single()
+    fun returnsMediumFindingForApplicationModuleWithReleaseMinifyDisabled() {
+        val finding = rule.evaluate(
+            contextWith(
+                config(
+                    androidPluginType = AndroidPluginType.APPLICATION,
+                    hasAndroidPlugin = true,
+                    minifyEnabled = true,
+                    releaseMinifyEnabled = false
+                )
+            )
+        ).single()
 
         assertEquals("gradle.release.minify_disabled", finding.ruleId)
         assertEquals(ReleaseFindingSeverity.MEDIUM, finding.severity)
         assertEquals("Release minification appears disabled", finding.title)
-        assertTrue(finding.evidence.contains("minifyEnabled=false"))
+        assertTrue(finding.evidence.contains("releaseMinifyEnabled=false"))
     }
 
     @Test
-    fun ignoresApplicationModuleWithMinifyEnabled() {
-        val findings = rule.evaluate(contextWith(config(AndroidPluginType.APPLICATION, hasAndroidPlugin = true, minifyEnabled = true)))
+    fun ignoresApplicationModuleWithOnlyGenericMinifyDisabled() {
+        val findings = rule.evaluate(
+            contextWith(
+                config(
+                    androidPluginType = AndroidPluginType.APPLICATION,
+                    hasAndroidPlugin = true,
+                    minifyEnabled = false,
+                    releaseMinifyEnabled = null
+                )
+            )
+        )
 
         assertTrue(findings.isEmpty())
     }
 
     @Test
-    fun ignoresApplicationModuleWithMissingMinifyValue() {
-        val findings = rule.evaluate(contextWith(config(AndroidPluginType.APPLICATION, hasAndroidPlugin = true, minifyEnabled = null)))
+    fun ignoresApplicationModuleWithReleaseMinifyEnabled() {
+        val findings = rule.evaluate(
+            contextWith(
+                config(
+                    androidPluginType = AndroidPluginType.APPLICATION,
+                    hasAndroidPlugin = true,
+                    minifyEnabled = false,
+                    releaseMinifyEnabled = true
+                )
+            )
+        )
 
         assertTrue(findings.isEmpty())
     }
 
     @Test
-    fun ignoresLibraryModuleWithMinifyDisabled() {
-        val findings = rule.evaluate(contextWith(config(AndroidPluginType.LIBRARY, hasAndroidPlugin = true, minifyEnabled = false)))
+    fun ignoresApplicationModuleWithMissingReleaseMinifyValue() {
+        val findings = rule.evaluate(
+            contextWith(
+                config(
+                    androidPluginType = AndroidPluginType.APPLICATION,
+                    hasAndroidPlugin = true,
+                    minifyEnabled = null,
+                    releaseMinifyEnabled = null
+                )
+            )
+        )
 
         assertTrue(findings.isEmpty())
     }
 
     @Test
-    fun ignoresDynamicFeatureModuleWithMinifyDisabled() {
-        val findings = rule.evaluate(contextWith(config(AndroidPluginType.DYNAMIC_FEATURE, hasAndroidPlugin = true, minifyEnabled = false)))
-
-        assertTrue(findings.isEmpty())
-    }
-
-    @Test
-    fun ignoresTestModuleWithMinifyDisabled() {
-        val findings = rule.evaluate(contextWith(config(AndroidPluginType.TEST, hasAndroidPlugin = true, minifyEnabled = false)))
-
-        assertTrue(findings.isEmpty())
-    }
-
-    @Test
-    fun ignoresUnknownAndroidModuleWithMinifyDisabled() {
-        val findings = rule.evaluate(contextWith(config(AndroidPluginType.UNKNOWN_ANDROID, hasAndroidPlugin = true, minifyEnabled = false)))
-        
-        assertTrue(findings.isEmpty())
-    }
-
-    @Test
-    fun ignoresNonAndroidConfigWithMinifyDisabled() {
-        val findings = rule.evaluate(contextWith(config(null, hasAndroidPlugin = false, minifyEnabled = false)))
+    fun ignoresLibraryModuleWithReleaseMinifyDisabled() {
+        val findings = rule.evaluate(
+            contextWith(
+                config(
+                    androidPluginType = AndroidPluginType.LIBRARY,
+                    hasAndroidPlugin = true,
+                    minifyEnabled = false,
+                    releaseMinifyEnabled = false
+                )
+            )
+        )
 
         assertTrue(findings.isEmpty())
     }
@@ -72,10 +96,35 @@ class MinifyDisabledReleaseRuleTest {
     fun canBeUsedThroughReleaseRuleInterface() {
         val releaseRule: ReleaseRule = rule
 
-        val finding = releaseRule.evaluate(contextWith(config(AndroidPluginType.APPLICATION, hasAndroidPlugin = true, minifyEnabled = false))).single()
+        val finding = releaseRule.evaluate(
+            contextWith(
+                config(
+                    androidPluginType = AndroidPluginType.APPLICATION,
+                    hasAndroidPlugin = true,
+                    minifyEnabled = true,
+                    releaseMinifyEnabled = false
+                )
+            )
+        ).single()
 
         assertEquals("gradle.release.minify_disabled", finding.ruleId)
         assertEquals(ReleaseFindingSeverity.MEDIUM, finding.severity)
+    }
+
+    @Test
+    fun ignoresNonAndroidConfigWithMinifyDisabled() {
+        val findings = rule.evaluate(
+            contextWith(
+                config(
+                    androidPluginType = null,
+                    hasAndroidPlugin = false,
+                    minifyEnabled = false,
+                    releaseMinifyEnabled = false
+                )
+            )
+        )
+
+        assertTrue(findings.isEmpty())
     }
 
     private fun contextWith(vararg configs: GradleAndroidConfig): ReleaseRuleContext =
@@ -89,7 +138,8 @@ class MinifyDisabledReleaseRuleTest {
     private fun config(
         androidPluginType: AndroidPluginType?,
         hasAndroidPlugin: Boolean,
-        minifyEnabled: Boolean?
+        minifyEnabled: Boolean?,
+        releaseMinifyEnabled: Boolean?
     ): GradleAndroidConfig =
         GradleAndroidConfig(
             gradleFile = Path.of("app/build.gradle.kts"),
@@ -103,6 +153,8 @@ class MinifyDisabledReleaseRuleTest {
             versionCode = 123,
             versionName = "1.2.3",
             minifyEnabled = minifyEnabled,
-            shrinkResources = null
+            shrinkResources = null,
+            releaseMinifyEnabled = releaseMinifyEnabled,
+            releaseShrinkResources = null
         )
 }

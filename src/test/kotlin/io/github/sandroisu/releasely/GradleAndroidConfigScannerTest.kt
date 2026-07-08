@@ -78,6 +78,8 @@ class GradleAndroidConfigScannerTest {
         val config = result.configs.single()
         assertEquals(true, config.minifyEnabled)
         assertEquals(true, config.shrinkResources)
+        assertEquals(true, config.releaseMinifyEnabled)
+        assertEquals(true, config.releaseShrinkResources)
     }
 
     @Test
@@ -147,6 +149,103 @@ class GradleAndroidConfigScannerTest {
         val config = result.configs.single()
         assertEquals(true, config.minifyEnabled)
         assertEquals(true, config.shrinkResources)
+        assertEquals(true, config.releaseMinifyEnabled)
+        assertEquals(true, config.releaseShrinkResources)
+    }
+
+    @Test
+    fun extractsKotlinDslReleaseMinifyEnabledFalse() = withGradleFile(
+        fileName = "build.gradle.kts",
+        content = """
+            plugins {
+                id("com.android.application")
+            }
+            android {
+                buildTypes {
+                    release {
+                        isMinifyEnabled = false
+                    }
+                }
+            }
+        """.trimIndent()
+    ) { result ->
+        assertEquals(false, result.configs.single().releaseMinifyEnabled)
+    }
+
+    @Test
+    fun extractsKotlinDslReleaseShrinkResourcesTrue() = withGradleFile(
+        fileName = "build.gradle.kts",
+        content = """
+            plugins {
+                id("com.android.application")
+            }
+            android {
+                buildTypes {
+                    release {
+                        isShrinkResources = true
+                    }
+                }
+            }
+        """.trimIndent()
+    ) { result ->
+        assertEquals(true, result.configs.single().releaseShrinkResources)
+    }
+
+    @Test
+    fun extractsKotlinDslGetByNameReleaseMinifyEnabledFalse() = withGradleFile(
+        fileName = "build.gradle.kts",
+        content = """
+            plugins {
+                id("com.android.application")
+            }
+            android {
+                buildTypes {
+                    getByName("release") {
+                        isMinifyEnabled = false
+                    }
+                }
+            }
+        """.trimIndent()
+    ) { result ->
+        assertEquals(false, result.configs.single().releaseMinifyEnabled)
+    }
+
+    @Test
+    fun extractsGroovyReleaseMinifyEnabledFalse() = withGradleFile(
+        fileName = "build.gradle",
+        content = """
+            plugins {
+                id 'com.android.application'
+            }
+            android {
+                buildTypes {
+                    release {
+                        minifyEnabled false
+                    }
+                }
+            }
+        """.trimIndent()
+    ) { result ->
+        assertEquals(false, result.configs.single().releaseMinifyEnabled)
+    }
+
+    @Test
+    fun extractsGroovyReleaseShrinkResourcesTrue() = withGradleFile(
+        fileName = "build.gradle",
+        content = """
+            plugins {
+                id 'com.android.application'
+            }
+            android {
+                buildTypes {
+                    release {
+                        shrinkResources true
+                    }
+                }
+            }
+        """.trimIndent()
+    ) { result ->
+        assertEquals(true, result.configs.single().releaseShrinkResources)
     }
 
     @Test
@@ -295,6 +394,47 @@ class GradleAndroidConfigScannerTest {
         assertEquals("com.example.app", config.namespace)
         assertNull(config.compileSdk)
         assertNull(config.minSdk)
+    }
+
+    @Test
+    fun returnsNullForVariableBasedReleaseMinifyEnabled() = withGradleFile(
+        fileName = "build.gradle.kts",
+        content = """
+            plugins {
+                id("com.android.application")
+            }
+            android {
+                buildTypes {
+                    release {
+                        isMinifyEnabled = releaseMinifyFlag
+                    }
+                }
+            }
+        """.trimIndent()
+    ) { result ->
+        val config = result.configs.single()
+        assertNull(config.releaseMinifyEnabled)
+    }
+
+    @Test
+    fun doesNotUseDebugMinifyEnabledAsReleaseMinifyEnabled() = withGradleFile(
+        fileName = "build.gradle.kts",
+        content = """
+            plugins {
+                id("com.android.application")
+            }
+            android {
+                buildTypes {
+                    debug {
+                        isMinifyEnabled = false
+                    }
+                }
+            }
+        """.trimIndent()
+    ) { result ->
+        val config = result.configs.single()
+        assertEquals(false, config.minifyEnabled)
+        assertNull(config.releaseMinifyEnabled)
     }
 
     private fun withGradleFile(
