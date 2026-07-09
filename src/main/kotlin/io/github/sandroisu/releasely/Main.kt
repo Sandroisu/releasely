@@ -36,6 +36,11 @@ class ScanCommand : CliktCommand(name = "scan") {
         help = "Path to write Markdown findings report"
     )
 
+    private val jsonReportPath: String? by option(
+        "--json-report",
+        help = "Path to write JSON findings report"
+    )
+
     override fun run() {
         val result = ProjectDetector().detect(java.nio.file.Path.of(path).toAbsolutePath().normalize())
 
@@ -164,10 +169,18 @@ class ScanCommand : CliktCommand(name = "scan") {
             }
         }
 
+        val reportFileWriter = ReportFileWriter()
+
         markdownReportPath?.let { reportPath ->
             val markdownReport = MarkdownFindingReportWriter().write(findings)
-            MarkdownReportFileWriter().write(Path.of(reportPath), markdownReport)
+            reportFileWriter.write(Path.of(reportPath), markdownReport)
             echo("Markdown report written: $reportPath")
+        }
+
+        jsonReportPath?.let { reportPath ->
+            val jsonReport = JsonFindingReportWriter().write(findings)
+            reportFileWriter.write(Path.of(reportPath), jsonReport)
+            echo("JSON report written: $reportPath")
         }
 
         if (permissionScanResult.failedManifestFiles.isNotEmpty()) {

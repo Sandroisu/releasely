@@ -8,12 +8,12 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
-class MarkdownReportFileWriterTest {
+class ReportFileWriterTest {
 
-    private val writer = MarkdownReportFileWriter()
+    private val writer = ReportFileWriter()
 
     @Test
-    fun createsParentDirectoriesAndWritesMarkdown() {
+    fun createsParentDirectories() {
         val directory = Files.createTempDirectory("releasely-markdown-report-test")
         try {
             val reportPath = directory.resolve("reports/releasely/report.md")
@@ -28,7 +28,35 @@ class MarkdownReportFileWriterTest {
     }
 
     @Test
-    fun overwritesExistingMarkdownFile() {
+    fun writesMarkdownContent() {
+        val directory = Files.createTempDirectory("releasely-markdown-report-test")
+        try {
+            val reportPath = directory.resolve("report.md")
+
+            writer.write(reportPath, "# Releasely Report")
+
+            assertEquals("# Releasely Report", reportPath.readText())
+        } finally {
+            directory.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun writesJsonContent() {
+        val directory = Files.createTempDirectory("releasely-markdown-report-test")
+        try {
+            val reportPath = directory.resolve("report.json")
+
+            writer.write(reportPath, "{\"findingsCount\":2}")
+
+            assertEquals("{\"findingsCount\":2}", reportPath.readText())
+        } finally {
+            directory.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun overwritesExistingFile() {
         val directory = Files.createTempDirectory("releasely-markdown-report-test")
         try {
             val reportPath = directory.resolve("report.md")

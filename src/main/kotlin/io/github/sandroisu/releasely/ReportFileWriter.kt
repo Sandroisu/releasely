@@ -4,10 +4,10 @@ import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.Files
 import java.nio.file.Path
 
-class MarkdownReportFileWriter {
+class ReportFileWriter {
 
-    fun write(path: Path, markdownReport: String) {
+    fun write(path: Path, reportContent: String) {
         path.parent?.let(Files::createDirectories)
-        Files.writeString(path, markdownReport, UTF_8)
+        Files.writeString(path, reportContent, UTF_8)
     }
 }
