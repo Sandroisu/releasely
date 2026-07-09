@@ -90,6 +90,31 @@ class ReleaseRuleEvaluatorTest {
         assertTrue(gradleRule.wasCalled)
     }
 
+    @Test
+    fun baselineFailureStillRunsComponentAndGradleFindingsTogether() {
+        val permissionRule = recordingRule("permission")
+        val componentRule = recordingRule("component")
+        val gradleRule = recordingRule("gradle")
+        val evaluator = ReleaseRuleEvaluator(
+            permissionRules = listOf(permissionRule),
+            componentRules = listOf(componentRule),
+            gradleRules = listOf(gradleRule)
+        )
+
+        val findings = evaluator.evaluate(
+            projectPath = Path.of("."),
+            currentPermissions = listOf("perm-1"),
+            baselinePermissions = null,
+            manifestComponents = listOf(component()),
+            gradleAndroidConfigs = listOf(config())
+        )
+
+        assertEquals(listOf("component", "gradle"), findings.map(ReleaseFinding::ruleId))
+        assertFalse(permissionRule.wasCalled)
+        assertTrue(componentRule.wasCalled)
+        assertTrue(gradleRule.wasCalled)
+    }
+
     private fun findingRule(ruleId: String, expectedPermission: String): ReleaseRule =
         ReleaseRule { context ->
             if (expectedPermission in context.permissions || context.manifestComponents.isNotEmpty() || context.gradleAndroidConfigs.isNotEmpty()) {
