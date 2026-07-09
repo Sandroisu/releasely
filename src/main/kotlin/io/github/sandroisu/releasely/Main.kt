@@ -121,10 +121,10 @@ class ScanCommand : CliktCommand(name = "scan") {
             currentManifestFiles = result.manifestFiles,
             baseRef = baseRef
         )
-        val findings = if (baselineResult.failureReason == null) {
+        val baselinePermissions = if (baselineResult.failureReason == null) {
             echo("Permission baseline: $baseRef")
-            val baselinePermissions = baselineResult.permissions.toSet()
-            val newPermissions = permissionScanResult.permissions.filterNot(baselinePermissions::contains)
+            val baselinePermissions = baselineResult.permissions
+            val newPermissions = permissionScanResult.permissions.filterNot(baselinePermissions.toSet()::contains)
             echo("New permissions since baseline: ${newPermissions.size}")
             echo("Baseline permissions: ${baselineResult.permissions.size}")
             if (newPermissions.isNotEmpty()) {
@@ -133,27 +133,18 @@ class ScanCommand : CliktCommand(name = "scan") {
                     echo("- $permission")
                 }
             }
-            val releaseRuleContext = ReleaseRuleContext(
-                projectPath = result.path,
-                permissions = newPermissions,
-                manifestComponents = componentScanResult.components,
-                gradleAndroidConfigs = gradleConfigScanResult.configs
-            )
-            val releaseRules: List<ReleaseRule> = listOf(
-                ManifestPermissionRiskRule(),
-                DangerousPermissionRule(),
-                ExportedComponentRule(),
-                MissingExportedWithIntentFilterRule(),
-                MinifyDisabledReleaseRule()
-            )
-
-            releaseRules.flatMap { releaseRule ->
-                releaseRule.evaluate(releaseRuleContext)
-            }
+            baselinePermissions
         } else {
             echo("Permission baseline unavailable: ${baselineResult.failureReason}")
-            emptyList()
+            null
         }
+        val findings = ReleaseRuleEvaluator().evaluate(
+            projectPath = result.path,
+            currentPermissions = permissionScanResult.permissions,
+            baselinePermissions = baselinePermissions,
+            manifestComponents = componentScanResult.components,
+            gradleAndroidConfigs = gradleConfigScanResult.configs
+        )
         echo("Finding scope:")
         echo("- Permission rules: new permissions since baseline")
         echo("- Manifest component rules: all manifest components")
