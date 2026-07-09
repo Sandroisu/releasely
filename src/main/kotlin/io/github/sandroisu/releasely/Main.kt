@@ -34,17 +34,17 @@ class ScanCommand : CliktCommand(name = "scan") {
 
     private val markdownReportPath: String? by option(
         "--markdown-report",
-        help = "Path to write Markdown findings report"
+        help = "Write a Markdown findings report to the given file path"
     )
 
     private val jsonReportPath: String? by option(
         "--json-report",
-        help = "Path to write JSON findings report"
+        help = "Write a JSON findings report to the given file path"
     )
 
     private val failOnSeverityName: String? by option(
         "--fail-on",
-        help = "Fail when findings reach or exceed severity threshold"
+        help = "Fail with non-zero exit code when findings reach this severity threshold. Allowed values: INFO, LOW, MEDIUM, HIGH. Example: MEDIUM fails on MEDIUM and HIGH findings."
     )
 
     override fun run() {
