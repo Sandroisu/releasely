@@ -6,6 +6,7 @@ import com.github.ajalt.clikt.core.main
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
+import java.nio.file.Path
 
 
 class ReleaselyCommand : CliktCommand(name = "releasely") {
@@ -29,6 +30,11 @@ class ScanCommand : CliktCommand(name = "scan") {
         "--base-ref",
         help = "Git ref used as the permission baseline"
     ).default("HEAD")
+
+    private val markdownReportPath: String? by option(
+        "--markdown-report",
+        help = "Path to write Markdown findings report"
+    )
 
     override fun run() {
         val result = ProjectDetector().detect(java.nio.file.Path.of(path).toAbsolutePath().normalize())
@@ -156,6 +162,12 @@ class ScanCommand : CliktCommand(name = "scan") {
             if (findingIndex < findings.lastIndex) {
                 echo()
             }
+        }
+
+        markdownReportPath?.let { reportPath ->
+            val markdownReport = MarkdownFindingReportWriter().write(findings)
+            MarkdownReportFileWriter().write(Path.of(reportPath), markdownReport)
+            echo("Markdown report written: $reportPath")
         }
 
         if (permissionScanResult.failedManifestFiles.isNotEmpty()) {
