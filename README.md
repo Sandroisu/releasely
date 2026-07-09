@@ -2,9 +2,9 @@
 
 **Catch Android release risks before your users do.**
 
-Releasely is a small Kotlin CLI that looks at an Android project from a release
-point of view. It does not ask whether the code is beautiful. It asks a more
-practical question: **is this build safe to ship?**
+Releasely is a Kotlin/JVM CLI for Android release risk audit. It looks at an
+Android project from a release point of view. It does not ask whether the code
+is beautiful. It asks a more practical question: **is this build safe to ship?**
 
 The project is at an early stage. Today, Releasely can:
 
@@ -12,40 +12,77 @@ The project is at an early stage. Today, Releasely can:
 - find manifests without wandering into build caches;
 - collect permissions across project manifests;
 - flag newly added sensitive permissions against a Git baseline;
-- report files it could not parse instead of quietly ignoring them.
+- report files it could not parse instead of quietly ignoring them;
+- write Markdown and JSON findings reports;
+- fail CI when findings reach a chosen severity threshold.
 
 No backend, no account, no source upload. The scan runs where the code lives.
 
-## Try it
+## Usage
 
-You need JDK 21. Point the CLI at an Android project:
+You need JDK 21.
+
+Basic scan:
+
+```powershell
+.\gradlew.bat run --args="scan --path C:\Users\alex\android"
+```
+
+Markdown report:
+
+```powershell
+.\gradlew.bat run --args="scan --path C:\Users\alex\android --markdown-report build/releasely/report.md"
+```
+
+JSON report:
+
+```powershell
+.\gradlew.bat run --args="scan --path C:\Users\alex\android --json-report build/releasely/report.json"
+```
+
+CI threshold:
+
+```powershell
+.\gradlew.bat run --args="scan --path C:\Users\alex\android --fail-on MEDIUM"
+```
+
+Combined run:
+
+```powershell
+.\gradlew.bat run --args="scan --path C:\Users\alex\android --markdown-report build/releasely/report.md --json-report build/releasely/report.json --fail-on MEDIUM"
+```
+
+Severity threshold order:
+
+```text
+INFO < LOW < MEDIUM < HIGH
+```
+
+When report options and `--fail-on` are used together, report files are written
+before the command exits with failure.
+
+By default, permission changes are compared with `HEAD`. To inspect a branch,
+choose another Git ref:
+
+```powershell
+.\gradlew.bat run --args="scan --path C:\Users\alex\android --base-ref origin/main"
+```
+
+On Unix-like shells:
 
 ```bash
 ./gradlew run --args="scan --path ../my-android-app"
 ```
 
-By default, permission changes are compared with `HEAD`. To inspect a branch,
-choose another Git ref:
-
-```bash
-./gradlew run --args="scan --path ../my-android-app --base-ref origin/main"
-```
-
-On Windows:
-
-```powershell
-.\gradlew.bat run --args="scan --path ..\my-android-app"
-```
-
-The current report is intentionally plain:
+The current stdout is intentionally plain:
 
 ```text
+.\gradlew.bat run --args="scan --path ..\my-android-app"
 Releasely scan started
-Project exists: yes
+Path: ..\my-android-app
 Gradle project: yes
 Android project: yes
-Manifest files: 3
-Permissions: 7
+Findings: 2
 ```
 
 ## Where it is going
@@ -60,7 +97,6 @@ The path there is straightforward:
 - richer manifest and Gradle inspection;
 - broader git diff analysis beyond manifest permissions;
 - focused release-risk rules with low noise;
-- Markdown and JSON reports;
 - a GitHub Action that can leave the boring warnings before release day.
 
 Deterministic checks come first. AI can explain and prioritize findings later,
