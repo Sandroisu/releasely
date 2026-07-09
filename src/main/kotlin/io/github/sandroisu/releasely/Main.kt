@@ -2,6 +2,7 @@ package io.github.sandroisu.releasely
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.Context
+import com.github.ajalt.clikt.core.ProgramResult
 import com.github.ajalt.clikt.core.main
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.options.default
@@ -41,7 +42,13 @@ class ScanCommand : CliktCommand(name = "scan") {
         help = "Path to write JSON findings report"
     )
 
+    private val failOnSeverityName: String? by option(
+        "--fail-on",
+        help = "Fail when findings reach or exceed severity threshold"
+    )
+
     override fun run() {
+        val failOnSeverity = parseFailOnSeverity(failOnSeverityName)
         val result = ProjectDetector().detect(java.nio.file.Path.of(path).toAbsolutePath().normalize())
 
         echo("Releasely scan started")
@@ -189,6 +196,11 @@ class ScanCommand : CliktCommand(name = "scan") {
                 echo("- ${result.path.relativize(manifestFile)}")
             }
         }
+
+        if (ReleaseFindingFailureDecider().shouldFail(findings, failOnSeverity)) {
+            echo("Releasely failed because findings reached threshold: ${failOnSeverity?.name}")
+            throw ProgramResult(1)
+        }
     }
 
     private fun yesOrNo(value: Boolean): String =
@@ -197,6 +209,20 @@ class ScanCommand : CliktCommand(name = "scan") {
         } else {
             "no"
         }
+
+    private fun parseFailOnSeverity(value: String?): ReleaseFindingSeverity? {
+        if (value == null) {
+            return null
+        }
+
+        return ReleaseFindingSeverity.entries.firstOrNull { severity ->
+            severity.name == value.uppercase()
+        } ?: run {
+            echo("Invalid --fail-on severity: $value")
+            echo("Allowed values: INFO, LOW, MEDIUM, HIGH")
+            throw ProgramResult(2)
+        }
+    }
 
     private fun echoFindingsBySeverity(findings: List<ReleaseFinding>) {
         if (findings.isEmpty()) {
