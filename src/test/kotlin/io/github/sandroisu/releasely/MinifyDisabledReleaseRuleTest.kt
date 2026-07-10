@@ -204,6 +204,7 @@ class MinifyDisabledReleaseRuleTest {
             minifyEnabled = minifyEnabled,
             shrinkResources = null,
             releaseMinifyEnabled = releaseMinifyEnabled,
-            releaseShrinkResources = null
+            releaseShrinkResources = null,
+            releaseDebuggable = null
         )
 }

@@ -12,7 +12,8 @@ class ReleaseRuleEvaluator(
         MissingExportedWithIntentFilterRule()
     ),
     private val gradleRules: List<ReleaseRule> = listOf(
-        MinifyDisabledReleaseRule()
+        MinifyDisabledReleaseRule(),
+        DebuggableReleaseRule()
     )
 ) {
 

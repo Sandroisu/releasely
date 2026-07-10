@@ -161,7 +161,8 @@ class ReleaseRuleEvaluatorTest {
             minifyEnabled = true,
             shrinkResources = null,
             releaseMinifyEnabled = false,
-            releaseShrinkResources = null
+            releaseShrinkResources = null,
+            releaseDebuggable = null
         )
 
     private class RecordingRule(

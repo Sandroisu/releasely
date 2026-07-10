@@ -24,5 +24,6 @@ data class GradleAndroidConfig(
     val minifyEnabled: Boolean?,
     val shrinkResources: Boolean?,
     val releaseMinifyEnabled: Boolean?,
-    val releaseShrinkResources: Boolean?
+    val releaseShrinkResources: Boolean?,
+    val releaseDebuggable: Boolean?
 )

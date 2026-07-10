@@ -34,7 +34,8 @@ class GradleAndroidConfigScanner {
 
         private val booleanAssignmentPatterns = mapOf(
             "minifyEnabled" to Regex("""\b(?:isMinifyEnabled|minifyEnabled)\s*(?:=|\s)\s*(true|false)\b"""),
-            "shrinkResources" to Regex("""\b(?:isShrinkResources|shrinkResources)\s*(?:=|\s)\s*(true|false)\b""")
+            "shrinkResources" to Regex("""\b(?:isShrinkResources|shrinkResources)\s*(?:=|\s)\s*(true|false)\b"""),
+            "debuggable" to Regex("""\b(?:isDebuggable|debuggable)\s*(?:=|\s)\s*(true|false)\b""")
         )
 
         private val defaultConfigHeader = Regex("""\bdefaultConfig\s*\{""")
@@ -99,7 +100,8 @@ class GradleAndroidConfigScanner {
             minifyEnabled = extractBoolean("minifyEnabled", releaseBuildTypeBlock ?: fileContent),
             shrinkResources = extractBoolean("shrinkResources", releaseBuildTypeBlock ?: fileContent),
             releaseMinifyEnabled = extractBooleanOrNull("minifyEnabled", releaseBuildTypeBlock),
-            releaseShrinkResources = extractBooleanOrNull("shrinkResources", releaseBuildTypeBlock)
+            releaseShrinkResources = extractBooleanOrNull("shrinkResources", releaseBuildTypeBlock),
+            releaseDebuggable = extractBooleanOrNull("debuggable", releaseBuildTypeBlock)
         )
 
         return config.takeIf { parsedConfig ->
@@ -114,7 +116,8 @@ class GradleAndroidConfigScanner {
                 parsedConfig.minifyEnabled != null ||
                 parsedConfig.shrinkResources != null ||
                 parsedConfig.releaseMinifyEnabled != null ||
-                parsedConfig.releaseShrinkResources != null
+                parsedConfig.releaseShrinkResources != null ||
+                parsedConfig.releaseDebuggable != null
         }
     }
 

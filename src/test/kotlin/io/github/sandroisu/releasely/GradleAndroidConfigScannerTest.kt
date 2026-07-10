@@ -192,6 +192,63 @@ class GradleAndroidConfigScannerTest {
     }
 
     @Test
+    fun extractsKotlinDslReleaseDebuggableTrue() = withGradleFile(
+        fileName = "build.gradle.kts",
+        content = """
+            plugins {
+                id("com.android.application")
+            }
+            android {
+                buildTypes {
+                    release {
+                        isDebuggable = true
+                    }
+                }
+            }
+        """.trimIndent()
+    ) { result ->
+        assertEquals(true, result.configs.single().releaseDebuggable)
+    }
+
+    @Test
+    fun extractsKotlinDslGetByNameReleaseDebuggableTrue() = withGradleFile(
+        fileName = "build.gradle.kts",
+        content = """
+            plugins {
+                id("com.android.application")
+            }
+            android {
+                buildTypes {
+                    getByName("release") {
+                        isDebuggable = true
+                    }
+                }
+            }
+        """.trimIndent()
+    ) { result ->
+        assertEquals(true, result.configs.single().releaseDebuggable)
+    }
+
+    @Test
+    fun extractsKotlinDslReleaseDebuggableFalse() = withGradleFile(
+        fileName = "build.gradle.kts",
+        content = """
+            plugins {
+                id("com.android.application")
+            }
+            android {
+                buildTypes {
+                    release {
+                        isDebuggable = false
+                    }
+                }
+            }
+        """.trimIndent()
+    ) { result ->
+        assertEquals(false, result.configs.single().releaseDebuggable)
+    }
+
+    @Test
     fun extractsKotlinDslGetByNameReleaseMinifyEnabledFalse() = withGradleFile(
         fileName = "build.gradle.kts",
         content = """
@@ -249,6 +306,25 @@ class GradleAndroidConfigScannerTest {
     }
 
     @Test
+    fun extractsGroovyReleaseDebuggableTrue() = withGradleFile(
+        fileName = "build.gradle",
+        content = """
+            plugins {
+                id 'com.android.application'
+            }
+            android {
+                buildTypes {
+                    release {
+                        debuggable true
+                    }
+                }
+            }
+        """.trimIndent()
+    ) { result ->
+        assertEquals(true, result.configs.single().releaseDebuggable)
+    }
+
+    @Test
     fun doesNotUseGroovyDebugMinifyEnabledAsReleaseMinifyEnabled() = withGradleFile(
         fileName = "build.gradle",
         content = """
@@ -267,6 +343,25 @@ class GradleAndroidConfigScannerTest {
         val config = result.configs.single()
         assertEquals(false, config.minifyEnabled)
         assertNull(config.releaseMinifyEnabled)
+    }
+
+    @Test
+    fun doesNotUseDebugDebuggableAsReleaseDebuggable() = withGradleFile(
+        fileName = "build.gradle.kts",
+        content = """
+            plugins {
+                id("com.android.application")
+            }
+            android {
+                buildTypes {
+                    debug {
+                        isDebuggable = true
+                    }
+                }
+            }
+        """.trimIndent()
+    ) { result ->
+        assertNull(result.configs.single().releaseDebuggable)
     }
 
     @Test
@@ -438,6 +533,25 @@ class GradleAndroidConfigScannerTest {
     }
 
     @Test
+    fun returnsNullForVariableBasedReleaseDebuggable() = withGradleFile(
+        fileName = "build.gradle.kts",
+        content = """
+            plugins {
+                id("com.android.application")
+            }
+            android {
+                buildTypes {
+                    release {
+                        isDebuggable = releaseDebuggableFlag
+                    }
+                }
+            }
+        """.trimIndent()
+    ) { result ->
+        assertNull(result.configs.single().releaseDebuggable)
+    }
+
+    @Test
     fun doesNotUseDebugMinifyEnabledAsReleaseMinifyEnabled() = withGradleFile(
         fileName = "build.gradle.kts",
         content = """
@@ -477,6 +591,64 @@ class GradleAndroidConfigScannerTest {
         val config = result.configs.single()
         assertEquals(false, config.minifyEnabled)
         assertNull(config.releaseMinifyEnabled)
+    }
+
+    @Test
+    fun doesNotUseStagingDebuggableAsReleaseDebuggable() = withGradleFile(
+        fileName = "build.gradle.kts",
+        content = """
+            plugins {
+                id("com.android.application")
+            }
+            android {
+                buildTypes {
+                    staging {
+                        isDebuggable = true
+                    }
+                }
+            }
+        """.trimIndent()
+    ) { result ->
+        assertNull(result.configs.single().releaseDebuggable)
+    }
+
+    @Test
+    fun doesNotUseReleaseCandidateDebuggableAsReleaseDebuggable() = withGradleFile(
+        fileName = "build.gradle.kts",
+        content = """
+            plugins {
+                id("com.android.application")
+            }
+            android {
+                buildTypes {
+                    releaseCandidate {
+                        isDebuggable = true
+                    }
+                }
+            }
+        """.trimIndent()
+    ) { result ->
+        assertNull(result.configs.single().releaseDebuggable)
+    }
+
+    @Test
+    fun doesNotUseDebuggableOutsideReleaseBuildType() = withGradleFile(
+        fileName = "build.gradle.kts",
+        content = """
+            val debuggable = true
+
+            plugins {
+                id("com.android.application")
+            }
+            android {
+                buildTypes {
+                    debug {
+                    }
+                }
+            }
+        """.trimIndent()
+    ) { result ->
+        assertNull(result.configs.single().releaseDebuggable)
     }
 
     @Test
