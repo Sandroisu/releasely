@@ -74,6 +74,60 @@ On Unix-like shells:
 ./gradlew run --args="scan --path ../my-android-app"
 ```
 
+## GitHub Action
+
+Until the first versioned release, use `sandroisu/releasely@main`. A pull request
+workflow can run the audit like this:
+
+```yaml
+name: Releasely
+
+on:
+  pull_request:
+
+jobs:
+  release-audit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: sandroisu/releasely@main
+        with:
+          path: .
+          base-ref: ${{ github.event.pull_request.base.sha }}
+          fail-on: HIGH
+```
+
+`fetch-depth: 0` makes the Git history available for permission comparison.
+`base-ref` selects the Git revision whose manifest permissions form the
+baseline; when it is empty, the Action does not pass `--base-ref` and the CLI
+keeps its default behavior.
+
+Action inputs:
+
+| Input | Default | Purpose |
+| --- | --- | --- |
+| `path` | `.` | Android project path, relative to the checked-out workspace or absolute. |
+| `base-ref` | empty | Git reference used for the permission baseline. |
+| `fail-on` | `HIGH` | Lowest severity that fails the step: `INFO`, `LOW`, `MEDIUM`, or `HIGH`. Empty disables threshold failure. |
+| `markdown-report` | `build/releasely/report.md` | Markdown report path relative to the workspace. |
+| `json-report` | `build/releasely/report.json` | JSON report path relative to the workspace. |
+| `upload-artifacts` | `true` | Upload both reports with `actions/upload-artifact`. |
+| `artifact-name` | `releasely-reports` | Name of the uploaded report artifact. |
+
+Relative project and report paths are resolved from `GITHUB_WORKSPACE`.
+Absolute report paths must still stay inside that workspace so GitHub can
+upload them. The Action exposes the normalized absolute paths as
+`markdown-report-path` and `json-report-path` outputs.
+
+The Markdown report is appended to the run's **Job summary**, and both report
+files are available under **Artifacts** on the workflow run page. Report and
+summary steps run even when `fail-on` rejects the findings, so the evidence is
+still available on a failed audit.
+
 The current stdout is intentionally plain:
 
 ```text
@@ -97,7 +151,7 @@ The path there is straightforward:
 - richer manifest and Gradle inspection;
 - broader git diff analysis beyond manifest permissions;
 - focused release-risk rules with low noise;
-- a GitHub Action that can leave the boring warnings before release day.
+- CI annotations and more focused pull request feedback.
 
 Deterministic checks come first. AI can explain and prioritize findings later,
 but it should never invent the evidence.

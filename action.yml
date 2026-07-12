@@ -1,0 +1,93 @@
+name: Releasely Android Release Audit
+description: Audit an Android project for release risks and publish Markdown and JSON reports.
+
+branding:
+  icon: shield
+  color: purple
+
+inputs:
+  path:
+    description: Path to the Android project, relative to GITHUB_WORKSPACE or absolute.
+    required: false
+    default: .
+  base-ref:
+    description: Git reference used as the permission baseline. Omit to use the CLI default.
+    required: false
+  fail-on:
+    description: Severity threshold that makes the audit fail (INFO, LOW, MEDIUM, or HIGH).
+    required: false
+    default: HIGH
+  markdown-report:
+    description: Markdown report path, relative to GITHUB_WORKSPACE or absolute within it.
+    required: false
+    default: build/releasely/report.md
+  json-report:
+    description: JSON report path, relative to GITHUB_WORKSPACE or absolute within it.
+    required: false
+    default: build/releasely/report.json
+  upload-artifacts:
+    description: Whether to upload the Markdown and JSON reports as a workflow artifact.
+    required: false
+    default: 'true'
+  artifact-name:
+    description: Name of the workflow artifact containing both reports.
+    required: false
+    default: releasely-reports
+
+outputs:
+  markdown-report-path:
+    description: Absolute normalized path to the Markdown report.
+    value: ${{ steps.scan.outputs.markdown-report-path }}
+  json-report-path:
+    description: Absolute normalized path to the JSON report.
+    value: ${{ steps.scan.outputs.json-report-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: '21'
+
+    - name: Set up Gradle
+      uses: gradle/actions/setup-gradle@v4
+
+    - name: Build Releasely distribution
+      shell: bash
+      run: bash "$GITHUB_ACTION_PATH/gradlew" --no-daemon --project-dir "$GITHUB_ACTION_PATH" installDist
+
+    - name: Scan Android project
+      id: scan
+      shell: bash
+      env:
+        RELEASELY_PROJECT_PATH: ${{ inputs.path }}
+        RELEASELY_BASE_REF: ${{ inputs.base-ref }}
+        RELEASELY_FAIL_ON: ${{ inputs.fail-on }}
+        RELEASELY_MARKDOWN_REPORT: ${{ inputs.markdown-report }}
+        RELEASELY_JSON_REPORT: ${{ inputs.json-report }}
+      run: bash "$GITHUB_ACTION_PATH/scripts/run-releasely-action.sh"
+
+    - name: Add report to job summary
+      if: ${{ always() }}
+      shell: bash
+      env:
+        MARKDOWN_REPORT_PATH: ${{ steps.scan.outputs.markdown-report-path }}
+      run: |
+        if [[ -n "$MARKDOWN_REPORT_PATH" && -f "$MARKDOWN_REPORT_PATH" ]]; then
+          cat "$MARKDOWN_REPORT_PATH" >> "$GITHUB_STEP_SUMMARY"
+        else
+          echo "Releasely Markdown report was not created. Check the preceding build and scan logs." >> "$GITHUB_STEP_SUMMARY"
+        fi
+
+    - name: Upload reports
+      if: ${{ always() && inputs.upload-artifacts == 'true' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: |
+          ${{ steps.scan.outputs.markdown-report-path }}
+          ${{ steps.scan.outputs.json-report-path }}
+        if-no-files-found: error
+
