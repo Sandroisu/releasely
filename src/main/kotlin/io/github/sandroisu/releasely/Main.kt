@@ -11,7 +11,7 @@ import java.nio.file.Path
 
 class ReleaselyCommand : CliktCommand(name = "releasely") {
     override fun help(context: Context): String =
-        "AI release auditor for mobile apps"
+        "Deterministic Android release risk auditor"
 
     override fun run() = Unit
 }

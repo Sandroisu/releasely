@@ -1,0 +1,36 @@
+name: Releasely
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      fail-on:
+        description: Minimum severity that fails the audit
+        required: true
+        default: HIGH
+        type: choice
+        options:
+          - HIGH
+          - MEDIUM
+          - LOW
+          - INFO
+
+permissions:
+  contents: read
+
+jobs:
+  release-audit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Run Releasely
+        uses: sandroisu/releasely@main
+        with:
+          path: .
+          base-ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
+          fail-on: ${{ github.event_name == 'workflow_dispatch' && inputs['fail-on'] || 'HIGH' }}

@@ -2,11 +2,17 @@
 
 **Catch Android release risks before your users do.**
 
-Releasely is a Kotlin/JVM CLI for Android release risk audit. It looks at an
-Android project from a release point of view. It does not ask whether the code
-is beautiful. It asks a more practical question: **is this build safe to ship?**
+Releasely is a deterministic static analyzer for Android release risks. It
+inspects an Android project for changes and configurations that are easy to
+miss before shipping, then produces structured findings for developers and CI.
 
-The project is at an early stage. Today, Releasely can:
+The current version does not use AI. Findings come from deterministic scanners
+and rules, so the same project state and scan inputs produce the same audit
+result. The CLI and GitHub Action run without a Releasely account, backend, or
+AI provider, and the repository stays on the machine or GitHub runner
+performing the scan.
+
+Today, Releasely can:
 
 - recognize Gradle and Android projects;
 - find manifests without wandering into build caches;
@@ -16,40 +22,70 @@ The project is at an early stage. Today, Releasely can:
 - write Markdown and JSON findings reports;
 - fail CI when findings reach a chosen severity threshold.
 
-No backend, no account, no source upload. The scan runs where the code lives.
+## Quick Start
 
-## Usage
+### GitHub Action (recommended)
 
-You need JDK 21.
+Copy the ready-to-use
+[Releasely workflow](examples/github-actions/releasely.yml) to
+`.github/workflows/releasely.yml` in an Android repository. Until the first tag
+is created, the example uses `sandroisu/releasely@main`.
 
-Basic scan:
+The workflow runs automatically for every pull request. To run it manually,
+open the repository's **Actions** tab, select **Releasely**, choose
+**Run workflow**, select the minimum failing severity, and start the run.
 
-```powershell
-.\gradlew.bat run --args="scan --path C:\Users\alex\android"
+Open the completed run to read the audit in **Job summary**. The same run's
+**Artifacts** section contains the Markdown and JSON reports.
+
+### Local CLI
+
+With `releasely` available on `PATH`, scan the current Android project:
+
+```shell
+releasely scan --path .
 ```
 
-Markdown report:
+To run Releasely from this repository's sources on the tracked smoke fixture,
+use JDK 21:
 
 ```powershell
-.\gradlew.bat run --args="scan --path C:\Users\alex\android --markdown-report build/releasely/report.md"
+.\gradlew.bat run --args="scan --path fixtures/action-smoke"
 ```
 
-JSON report:
+On Unix-like shells:
 
-```powershell
-.\gradlew.bat run --args="scan --path C:\Users\alex\android --json-report build/releasely/report.json"
+```shell
+./gradlew run --args="scan --path fixtures/action-smoke"
 ```
 
-CI threshold:
+## CLI usage
 
-```powershell
-.\gradlew.bat run --args="scan --path C:\Users\alex\android --fail-on MEDIUM"
+Write a Markdown report:
+
+```shell
+releasely scan --path . --markdown-report build/releasely/report.md
 ```
 
-Combined run:
+Write a JSON report:
 
-```powershell
-.\gradlew.bat run --args="scan --path C:\Users\alex\android --markdown-report build/releasely/report.md --json-report build/releasely/report.json --fail-on MEDIUM"
+```shell
+releasely scan --path . --json-report build/releasely/report.json
+```
+
+Fail CI when findings reach a threshold:
+
+```shell
+releasely scan --path . --fail-on MEDIUM
+```
+
+Write both reports and apply a threshold:
+
+```shell
+releasely scan --path . \
+  --markdown-report build/releasely/report.md \
+  --json-report build/releasely/report.json \
+  --fail-on MEDIUM
 ```
 
 Severity threshold order:
@@ -64,47 +100,17 @@ before the command exits with failure.
 By default, permission changes are compared with `HEAD`. To inspect a branch,
 choose another Git ref:
 
-```powershell
-.\gradlew.bat run --args="scan --path C:\Users\alex\android --base-ref origin/main"
-```
-
-On Unix-like shells:
-
-```bash
-./gradlew run --args="scan --path ../my-android-app"
+```shell
+releasely scan --path . --base-ref origin/main
 ```
 
 ## GitHub Action
 
-Until the first versioned release, use `sandroisu/releasely@main`. A pull request
-workflow can run the audit like this:
-
-```yaml
-name: Releasely
-
-on:
-  pull_request:
-
-jobs:
-  release-audit:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-
-      - uses: sandroisu/releasely@main
-        with:
-          path: .
-          base-ref: ${{ github.event.pull_request.base.sha }}
-          fail-on: HIGH
-```
-
-`fetch-depth: 0` makes the Git history available for permission comparison.
-`base-ref` selects the Git revision whose manifest permissions form the
-baseline; when it is empty, the Action does not pass `--base-ref` and the CLI
-keeps its default behavior.
+The [copy-ready workflow](examples/github-actions/releasely.yml) supports both
+pull request audits and manual runs with a selectable severity threshold.
+`fetch-depth: 0` makes Git history available for permission comparison.
+`base-ref` selects the pull request base revision; when it is empty, the Action
+does not pass `--base-ref` and the CLI keeps its default behavior.
 
 Action inputs:
 
@@ -139,33 +145,38 @@ should use `sandroisu/releasely@v0`; the `v0` alias will follow the latest
 compatible `0.x` release. The public Action contract is not stable enough for a
 `v1` release yet.
 
-The current stdout is intentionally plain:
+## AI roadmap
+
+Releasely does not currently use AI. Deterministic scanners and rules remain the
+source of truth, and AI will never determine whether a rule matched.
+
+The planned optional flow is:
 
 ```text
-.\gradlew.bat run --args="scan --path ..\my-android-app"
-Releasely scan started
-Path: ..\my-android-app
-Gradle project: yes
-Android project: yes
-Findings: 2
+structured findings
+-> optional AI explanation
+-> release summary / remediation hints / QA checklist
 ```
 
-## Where it is going
+The first planned AI integration follows a bring-your-own-key (BYOK) model:
 
-The useful version of Releasely should catch changes that are easy to miss in a
-busy pull request: a new dangerous permission, an exported component, a broken
-deep link, a release build without minification, or a version code that stayed
-behind.
+- users provide their own API key through an environment variable or GitHub
+  Secret, never through a CLI argument;
+- Releasely does not store the key;
+- the provider integration remains replaceable;
+- by default, AI receives structured findings and evidence, not the entire
+  repository;
+- AI cannot change severity, rule results, or the CLI exit code;
+- AI remains completely optional, and the CLI and Action continue to work
+  without it.
 
-The path there is straightforward:
+No provider, configuration name, or public AI interface is defined yet.
 
-- richer manifest and Gradle inspection;
-- broader git diff analysis beyond manifest permissions;
-- focused release-risk rules with low noise;
-- CI annotations and more focused pull request feedback.
+## Roadmap
 
-Deterministic checks come first. AI can explain and prioritize findings later,
-but it should never invent the evidence.
+See [ROADMAP.md](ROADMAP.md) for the ordered v0.x product direction. The focus
+remains deterministic Android release checks first, with optional explanation
+layers later.
 
 ## Current status
 
