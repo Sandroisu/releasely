@@ -46,13 +46,13 @@ runs:
   using: composite
   steps:
     - name: Set up JDK 21
-      uses: actions/setup-java@v4
+      uses: actions/setup-java@v5
       with:
         distribution: temurin
         java-version: '21'
 
     - name: Set up Gradle
-      uses: gradle/actions/setup-gradle@v4
+      uses: gradle/actions/setup-gradle@v5
 
     - name: Build Releasely distribution
       shell: bash
@@ -86,7 +86,7 @@ runs:
 
     - name: Upload reports
       if: ${{ always() && inputs.upload-artifacts == 'true' && steps.scan.outputs.markdown-report-path != '' && steps.scan.outputs.json-report-path != '' }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ inputs.artifact-name }}
         path: |

@@ -90,7 +90,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -122,6 +122,10 @@ Relative project and report paths are resolved from `GITHUB_WORKSPACE`.
 Absolute report paths must still stay inside that workspace so GitHub can
 upload them. The Action exposes the normalized absolute paths as
 `markdown-report-path` and `json-report-path` outputs.
+
+GitHub-hosted `ubuntu-latest` is supported. Self-hosted runners have not been
+fully verified; the Node.js 24-based Action dependencies require GitHub Actions
+Runner `2.327.1` or newer.
 
 The Markdown report is appended to the run's **Job summary**, and both report
 files are available under **Artifacts** on the workflow run page. Report and

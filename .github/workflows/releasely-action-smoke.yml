@@ -14,7 +14,7 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -58,7 +58,7 @@ jobs:
 
       - name: Download successful audit artifact
         if: ${{ always() }}
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: releasely-action-smoke-success
           path: build/downloaded-artifacts/success
@@ -99,7 +99,7 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -143,7 +143,7 @@ jobs:
 
       - name: Download threshold-failure audit artifact
         if: ${{ always() }}
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: releasely-action-smoke-threshold-failure
           path: build/downloaded-artifacts/threshold-failure
