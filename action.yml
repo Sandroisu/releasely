@@ -67,7 +67,10 @@ runs:
         RELEASELY_FAIL_ON: ${{ inputs.fail-on }}
         RELEASELY_MARKDOWN_REPORT: ${{ inputs.markdown-report }}
         RELEASELY_JSON_REPORT: ${{ inputs.json-report }}
-      run: bash "$GITHUB_ACTION_PATH/scripts/run-releasely-action.sh"
+      run: |
+        scan_exit_code=0
+        bash "$GITHUB_ACTION_PATH/scripts/run-releasely-action.sh" || scan_exit_code=$?
+        printf 'exit-code=%s\n' "$scan_exit_code" >> "$GITHUB_OUTPUT"
 
     - name: Add report to job summary
       if: ${{ always() }}
@@ -82,7 +85,7 @@ runs:
         fi
 
     - name: Upload reports
-      if: ${{ always() && inputs.upload-artifacts == 'true' }}
+      if: ${{ always() && inputs.upload-artifacts == 'true' && steps.scan.outputs.markdown-report-path != '' && steps.scan.outputs.json-report-path != '' }}
       uses: actions/upload-artifact@v4
       with:
         name: ${{ inputs.artifact-name }}
@@ -91,3 +94,9 @@ runs:
           ${{ steps.scan.outputs.json-report-path }}
         if-no-files-found: error
 
+    - name: Propagate scan result
+      if: ${{ always() && steps.scan.outputs.exit-code != '' }}
+      shell: bash
+      env:
+        RELEASELY_EXIT_CODE: ${{ steps.scan.outputs.exit-code }}
+      run: exit "$RELEASELY_EXIT_CODE"

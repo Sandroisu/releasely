@@ -4,9 +4,13 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
-  smoke:
+  successful-audit:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Check out repository
@@ -14,29 +18,29 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Build and test Releasely
-        shell: bash
-        run: |
-          chmod +x ./gradlew
-          ./gradlew build
-
-      - name: Run local Releasely Action
-        id: releasely
+      - name: Run successful local Releasely Action
+        id: successful_audit
         uses: ./
         with:
           path: fixtures/action-smoke
-          base-ref: ${{ github.event.pull_request.base.sha || github.event.before }}
           fail-on: HIGH
-          markdown-report: build/releasely/action-smoke-report.md
-          json-report: build/releasely/action-smoke-report.json
-          artifact-name: releasely-action-smoke-reports
+          markdown-report: build/releasely/success/action-smoke.md
+          json-report: build/releasely/success/action-smoke.json
+          artifact-name: releasely-action-smoke-success
 
-      - name: Verify smoke reports
+      - name: Verify successful Action and workspace reports
+        if: ${{ always() }}
         shell: bash
         env:
-          MARKDOWN_REPORT_PATH: ${{ steps.releasely.outputs.markdown-report-path }}
-          JSON_REPORT_PATH: ${{ steps.releasely.outputs.json-report-path }}
+          ACTION_OUTCOME: ${{ steps.successful_audit.outcome }}
+          MARKDOWN_REPORT_PATH: ${{ steps.successful_audit.outputs.markdown-report-path }}
+          JSON_REPORT_PATH: ${{ steps.successful_audit.outputs.json-report-path }}
         run: |
+          test "$ACTION_OUTCOME" = "success"
+          test -n "$MARKDOWN_REPORT_PATH"
+          test -n "$JSON_REPORT_PATH"
+          [[ "$MARKDOWN_REPORT_PATH" = /* ]]
+          [[ "$JSON_REPORT_PATH" = /* ]]
           test -f "$MARKDOWN_REPORT_PATH"
           test -f "$JSON_REPORT_PATH"
           python3 - "$JSON_REPORT_PATH" <<'PY'
@@ -47,9 +51,125 @@ jobs:
               report = json.load(report_file)
 
           assert report["findingsCount"] == 1, report
-          assert report["findingsByRule"] == {
-              "manifest.component.exported.activity": 1
-          }, report
-          assert report["findings"][0]["severity"] == "MEDIUM", report
+          finding = report["findings"][0]
+          assert finding["ruleId"] == "manifest.component.exported.activity", report
+          assert finding["severity"] == "MEDIUM", report
           PY
 
+      - name: Download successful audit artifact
+        if: ${{ always() }}
+        uses: actions/download-artifact@v4
+        with:
+          name: releasely-action-smoke-success
+          path: build/downloaded-artifacts/success
+
+      - name: Verify successful audit artifact
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          python3 - "build/downloaded-artifacts/success" <<'PY'
+          import json
+          import pathlib
+          import sys
+
+          artifact_root = pathlib.Path(sys.argv[1])
+          files = sorted(
+              path.relative_to(artifact_root).as_posix()
+              for path in artifact_root.rglob("*")
+              if path.is_file()
+          )
+          assert files == ["action-smoke.json", "action-smoke.md"], files
+
+          with (artifact_root / "action-smoke.json").open(encoding="utf-8") as report_file:
+              report = json.load(report_file)
+
+          assert report["findingsCount"] == 1, report
+          finding = report["findings"][0]
+          assert finding["ruleId"] == "manifest.component.exported.activity", report
+          assert finding["severity"] == "MEDIUM", report
+          PY
+
+      - name: Build and test Releasely
+        shell: bash
+        run: bash "$GITHUB_WORKSPACE/gradlew" --no-daemon --project-dir "$GITHUB_WORKSPACE" build
+
+  threshold-failure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run threshold-failure local Releasely Action
+        id: threshold_failure
+        continue-on-error: true
+        uses: ./
+        with:
+          path: fixtures/action-smoke
+          fail-on: MEDIUM
+          markdown-report: build/releasely/threshold-failure/action-smoke.md
+          json-report: build/releasely/threshold-failure/action-smoke.json
+          artifact-name: releasely-action-smoke-threshold-failure
+
+      - name: Verify failed Action and preserved workspace reports
+        shell: bash
+        env:
+          ACTION_OUTCOME: ${{ steps.threshold_failure.outcome }}
+          MARKDOWN_REPORT_PATH: ${{ steps.threshold_failure.outputs.markdown-report-path }}
+          JSON_REPORT_PATH: ${{ steps.threshold_failure.outputs.json-report-path }}
+        run: |
+          test "$ACTION_OUTCOME" = "failure"
+          test -n "$MARKDOWN_REPORT_PATH"
+          test -n "$JSON_REPORT_PATH"
+          [[ "$MARKDOWN_REPORT_PATH" = /* ]]
+          [[ "$JSON_REPORT_PATH" = /* ]]
+          test -f "$MARKDOWN_REPORT_PATH"
+          test -f "$JSON_REPORT_PATH"
+          python3 - "$JSON_REPORT_PATH" <<'PY'
+          import json
+          import sys
+
+          with open(sys.argv[1], encoding="utf-8") as report_file:
+              report = json.load(report_file)
+
+          assert report["findingsCount"] == 1, report
+          finding = report["findings"][0]
+          assert finding["ruleId"] == "manifest.component.exported.activity", report
+          assert finding["severity"] == "MEDIUM", report
+          PY
+
+      - name: Download threshold-failure audit artifact
+        if: ${{ always() }}
+        uses: actions/download-artifact@v4
+        with:
+          name: releasely-action-smoke-threshold-failure
+          path: build/downloaded-artifacts/threshold-failure
+
+      - name: Verify threshold-failure audit artifact
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          python3 - "build/downloaded-artifacts/threshold-failure" <<'PY'
+          import json
+          import pathlib
+          import sys
+
+          artifact_root = pathlib.Path(sys.argv[1])
+          files = sorted(
+              path.relative_to(artifact_root).as_posix()
+              for path in artifact_root.rglob("*")
+              if path.is_file()
+          )
+          assert files == ["action-smoke.json", "action-smoke.md"], files
+
+          with (artifact_root / "action-smoke.json").open(encoding="utf-8") as report_file:
+              report = json.load(report_file)
+
+          assert report["findingsCount"] == 1, report
+          finding = report["findings"][0]
+          assert finding["ruleId"] == "manifest.component.exported.activity", report
+          assert finding["severity"] == "MEDIUM", report
+          PY

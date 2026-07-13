@@ -128,6 +128,13 @@ files are available under **Artifacts** on the workflow run page. Report and
 summary steps run even when `fail-on` rejects the findings, so the evidence is
 still available on a failed audit.
 
+### First release plan
+
+The first versioned release will be `v0.1.0`. After it is published, workflows
+should use `sandroisu/releasely@v0`; the `v0` alias will follow the latest
+compatible `0.x` release. The public Action contract is not stable enough for a
+`v1` release yet.
+
 The current stdout is intentionally plain:
 
 ```text
