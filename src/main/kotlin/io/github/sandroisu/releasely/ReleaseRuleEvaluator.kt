@@ -1,5 +1,6 @@
 package io.github.sandroisu.releasely
 
+import io.github.sandroisu.releasely.rules.*
 import java.nio.file.Path
 
 class ReleaseRuleEvaluator(

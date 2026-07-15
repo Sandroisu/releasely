@@ -1,18 +1,25 @@
-package io.github.sandroisu.releasely
+package io.github.sandroisu.releasely.rules
 
-class ExportedComponentRule : ReleaseRule {
+import io.github.sandroisu.releasely.ManifestComponent
+import io.github.sandroisu.releasely.ManifestComponentType
+import io.github.sandroisu.releasely.ReleaseFinding
+import io.github.sandroisu.releasely.ReleaseFindingSeverity
+
+class MissingExportedWithIntentFilterRule : ReleaseRule {
 
     override fun evaluate(context: ReleaseRuleContext): List<ReleaseFinding> =
         context.manifestComponents
-            .filter { component -> component.exported == true }
+            .filter { component ->
+                component.hasIntentFilter && component.exported == null
+            }
             .map(::findingFor)
 
     private fun findingFor(component: ManifestComponent): ReleaseFinding =
         ReleaseFinding(
-            ruleId = "manifest.component.exported.${component.type.ruleIdSuffix()}",
+            ruleId = "manifest.component.missing_exported.${component.type.ruleIdSuffix()}",
             severity = component.type.severity(),
-            title = "Exported manifest component detected",
-            description = "Android manifest declares an exported ${component.type.descriptionName()}. Exported components can be invoked by other apps and should be verified before release.",
+            title = "Missing android:exported on component with intent-filter",
+            description = "Android manifest declares a component with an intent-filter but without explicit android:exported. This can break Android 12+ compatibility when targetSdk is 31 or higher.",
             evidence = buildList {
                 add("Component type: ${component.type.descriptionName()}")
                 component.name?.let { componentName ->
@@ -20,7 +27,7 @@ class ExportedComponentRule : ReleaseRule {
                 }
                 add("Manifest file: ${component.manifestFile}")
             },
-            recommendation = "Verify that this component must be exported, has the expected intent filters, is protected when needed, and is covered by release QA.",
+            recommendation = "Declare android:exported explicitly. Use android:exported=\"true\" only if the component must be accessible from other apps; otherwise use android:exported=\"false\".",
             locationPath = component.manifestFile.toString()
         )
 

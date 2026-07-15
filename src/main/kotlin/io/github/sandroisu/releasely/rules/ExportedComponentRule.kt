@@ -1,20 +1,20 @@
-package io.github.sandroisu.releasely
+package io.github.sandroisu.releasely.rules
 
-class MissingExportedWithIntentFilterRule : ReleaseRule {
+import io.github.sandroisu.releasely.*
+
+class ExportedComponentRule : ReleaseRule {
 
     override fun evaluate(context: ReleaseRuleContext): List<ReleaseFinding> =
         context.manifestComponents
-            .filter { component ->
-                component.hasIntentFilter && component.exported == null
-            }
+            .filter { component -> component.exported == true }
             .map(::findingFor)
 
     private fun findingFor(component: ManifestComponent): ReleaseFinding =
         ReleaseFinding(
-            ruleId = "manifest.component.missing_exported.${component.type.ruleIdSuffix()}",
+            ruleId = "manifest.component.exported.${component.type.ruleIdSuffix()}",
             severity = component.type.severity(),
-            title = "Missing android:exported on component with intent-filter",
-            description = "Android manifest declares a component with an intent-filter but without explicit android:exported. This can break Android 12+ compatibility when targetSdk is 31 or higher.",
+            title = "Exported manifest component detected",
+            description = "Android manifest declares an exported ${component.type.descriptionName()}. Exported components can be invoked by other apps and should be verified before release.",
             evidence = buildList {
                 add("Component type: ${component.type.descriptionName()}")
                 component.name?.let { componentName ->
@@ -22,7 +22,7 @@ class MissingExportedWithIntentFilterRule : ReleaseRule {
                 }
                 add("Manifest file: ${component.manifestFile}")
             },
-            recommendation = "Declare android:exported explicitly. Use android:exported=\"true\" only if the component must be accessible from other apps; otherwise use android:exported=\"false\".",
+            recommendation = "Verify that this component must be exported, has the expected intent filters, is protected when needed, and is covered by release QA.",
             locationPath = component.manifestFile.toString()
         )
 

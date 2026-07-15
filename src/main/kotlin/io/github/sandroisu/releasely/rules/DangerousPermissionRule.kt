@@ -1,4 +1,7 @@
-package io.github.sandroisu.releasely
+package io.github.sandroisu.releasely.rules
+
+import io.github.sandroisu.releasely.ReleaseFinding
+import io.github.sandroisu.releasely.ReleaseFindingSeverity
 
 class DangerousPermissionRule : ReleaseRule {
 

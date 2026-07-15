@@ -1,4 +1,6 @@
-package io.github.sandroisu.releasely
+package io.github.sandroisu.releasely.rules
+
+import io.github.sandroisu.releasely.*
 
 class DebuggableReleaseRule : ReleaseRule {
 
