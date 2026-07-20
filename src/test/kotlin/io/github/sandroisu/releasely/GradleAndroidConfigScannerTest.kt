@@ -1,7 +1,10 @@
 package io.github.sandroisu.releasely
 
+import io.github.sandroisu.releasely.rules.MinifyDisabledReleaseRule
+import io.github.sandroisu.releasely.rules.ReleaseRuleContext
 import java.nio.file.Files
 import java.nio.file.Path
+import kotlin.io.path.createDirectories
 import kotlin.io.path.writeText
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -670,6 +673,195 @@ class GradleAndroidConfigScannerTest {
         val config = result.configs.single()
         assertEquals(false, config.minifyEnabled)
         assertNull(config.releaseMinifyEnabled)
+    }
+
+    @Test
+    fun resolvesApplicationPluginViaCatalogAliasWithoutAndroidInAccessorName() = withGradleProject(
+        catalog = """
+            [plugins]
+            app = { id = "com.android.application", version.ref = "agp" }
+        """.trimIndent(),
+        moduleBuildFile = "alias(libs.plugins.app)"
+    ) { result ->
+        val config = result.configs.single()
+        assertEquals(true, config.hasAndroidPlugin)
+        assertEquals(AndroidPluginType.APPLICATION, config.androidPluginType)
+    }
+
+    @Test
+    fun resolvesLibraryPluginViaCatalogAliasWithoutAndroidInAccessorName() = withGradleProject(
+        catalog = """
+            [plugins]
+            sharedModule = { id = "com.android.library", version.ref = "agp" }
+        """.trimIndent(),
+        moduleBuildFile = "alias(libs.plugins.sharedModule)"
+    ) { result ->
+        val config = result.configs.single()
+        assertEquals(true, config.hasAndroidPlugin)
+        assertEquals(AndroidPluginType.LIBRARY, config.androidPluginType)
+    }
+
+    @Test
+    fun resolvesThreeTimesADayAliasForm() = withGradleProject(
+        catalog = """
+            [versions]
+            agp = "8.7.0"
+
+            [plugins]
+            androidApplication = { id = "com.android.application", version.ref = "agp" }
+            composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "agp" }
+        """.trimIndent(),
+        moduleBuildFile = """
+            plugins {
+                alias(libs.plugins.androidApplication)
+                alias(libs.plugins.composeMultiplatform)
+            }
+            android {
+                namespace = "io.github.sandroisu.threetimesaday"
+            }
+        """.trimIndent()
+    ) { result ->
+        val config = result.configs.single()
+        assertEquals(true, config.hasAndroidPlugin)
+        assertEquals(AndroidPluginType.APPLICATION, config.androidPluginType)
+    }
+
+    @Test
+    fun resolvesDashedCatalogAliasThroughGeneratedDottedAccessor() = withGradleProject(
+        catalog = """
+            [plugins]
+            android-application = { id = "com.android.application", version.ref = "agp" }
+        """.trimIndent(),
+        moduleBuildFile = "alias(libs.plugins.android.application)"
+    ) { result ->
+        val config = result.configs.single()
+        assertEquals(true, config.hasAndroidPlugin)
+        assertEquals(AndroidPluginType.APPLICATION, config.androidPluginType)
+    }
+
+    @Test
+    fun rootAliasWithApplyFalseDoesNotBecomeAndroidModule() = withGradleProject(
+        catalog = """
+            [plugins]
+            androidApplication = { id = "com.android.application", version.ref = "agp" }
+            androidLibrary = { id = "com.android.library", version.ref = "agp" }
+        """.trimIndent(),
+        moduleBuildFile = """
+            plugins {
+                alias(libs.plugins.androidApplication) apply false
+                alias(libs.plugins.androidLibrary) apply false
+            }
+        """.trimIndent()
+    ) { result ->
+        assertEquals(1, result.scannedGradleFileCount)
+        assertTrue(result.failedGradleFiles.isEmpty())
+        assertTrue(result.configs.isEmpty())
+    }
+
+    @Test
+    fun unknownCatalogAliasIdStaysUnknownAndroid() = withGradleProject(
+        catalog = """
+            [plugins]
+            androidApplication = { id = "com.acme.android.custom", version.ref = "agp" }
+        """.trimIndent(),
+        moduleBuildFile = """
+            plugins {
+                alias(libs.plugins.androidApplication)
+            }
+            android {
+                namespace = "com.acme.app"
+            }
+        """.trimIndent()
+    ) { result ->
+        val config = result.configs.single()
+        assertEquals(true, config.hasAndroidPlugin)
+        assertEquals(AndroidPluginType.UNKNOWN_ANDROID, config.androidPluginType)
+    }
+
+    @Test
+    fun missingCatalogFallsBackToAccessorHeuristic() = withGradleFile(
+        fileName = "build.gradle.kts",
+        content = "alias(libs.plugins.android.application)"
+    ) { result ->
+        assertTrue(result.failedGradleFiles.isEmpty())
+        val config = result.configs.single()
+        assertEquals(true, config.hasAndroidPlugin)
+        assertEquals(AndroidPluginType.APPLICATION, config.androidPluginType)
+    }
+
+    @Test
+    fun keepsDirectPluginIdWhenCatalogIsPresent() = withGradleProject(
+        catalog = """
+            [plugins]
+            androidApplication = { id = "com.android.application", version.ref = "agp" }
+        """.trimIndent(),
+        moduleBuildFile = """
+            plugins {
+                id("com.android.application")
+            }
+        """.trimIndent()
+    ) { result ->
+        val config = result.configs.single()
+        assertEquals(true, config.hasAndroidPlugin)
+        assertEquals(AndroidPluginType.APPLICATION, config.androidPluginType)
+    }
+
+    @Test
+    fun applicationOnlyRuleRunsAfterApplicationResolvedViaAlias() = withGradleProject(
+        catalog = """
+            [plugins]
+            androidApplication = { id = "com.android.application", version.ref = "agp" }
+        """.trimIndent(),
+        moduleBuildFile = """
+            plugins {
+                alias(libs.plugins.androidApplication)
+            }
+            android {
+                buildTypes {
+                    getByName("release") {
+                        isMinifyEnabled = false
+                    }
+                }
+            }
+        """.trimIndent()
+    ) { result ->
+        val config = result.configs.single()
+        assertEquals(AndroidPluginType.APPLICATION, config.androidPluginType)
+        assertEquals(false, config.releaseMinifyEnabled)
+
+        val findings = MinifyDisabledReleaseRule().evaluate(
+            ReleaseRuleContext(
+                projectPath = config.gradleFile.parent,
+                permissions = emptyList(),
+                manifestComponents = emptyList(),
+                gradleAndroidConfigs = result.configs
+            )
+        )
+        assertEquals(1, findings.size)
+        assertEquals("gradle.release.minify_disabled", findings.single().ruleId)
+    }
+
+    private fun withGradleProject(
+        catalog: String,
+        moduleBuildFile: String,
+        moduleDirectoryName: String = "androidApp",
+        assertion: (GradleAndroidConfigScanResult) -> Unit
+    ) {
+        val projectRoot = Files.createTempDirectory("releasely-gradle-project-test")
+        try {
+            val catalogFile = projectRoot.resolve("gradle").resolve("libs.versions.toml")
+            catalogFile.parent.createDirectories()
+            catalogFile.writeText(catalog)
+
+            val moduleDirectory = projectRoot.resolve(moduleDirectoryName)
+            moduleDirectory.createDirectories()
+            val buildFile = moduleDirectory.resolve("build.gradle.kts")
+            buildFile.writeText(moduleBuildFile)
+
+            assertion(scanner.scan(listOf(buildFile)))
+        } finally {
+            projectRoot.toFile().deleteRecursively()
+        }
     }
 
     private fun withGradleFile(

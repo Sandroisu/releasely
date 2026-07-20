@@ -50,13 +50,15 @@ class GradleAndroidConfigScanner {
             .filter(Files::isRegularFile)
             .filter(::isAndroidModuleBuildFile)
 
+        val aliasCatalogs = PluginAliasCatalogs()
         val configs = mutableListOf<GradleAndroidConfig>()
         val failedGradleFiles = mutableListOf<Path>()
 
         filesToScan.forEach { gradleFile ->
             try {
                 val fileContent = Files.readString(gradleFile)
-                parseConfig(gradleFile, fileContent)?.let(configs::add)
+                val aliasResolver = aliasCatalogs.resolverFor(gradleFile)
+                parseConfig(gradleFile, fileContent, aliasResolver)?.let(configs::add)
             } catch (_: Exception) {
                 failedGradleFiles.add(gradleFile)
             }
@@ -72,8 +74,12 @@ class GradleAndroidConfigScanner {
     private fun isAndroidModuleBuildFile(gradleFile: Path): Boolean =
         gradleFile.name == "build.gradle" || gradleFile.name == "build.gradle.kts"
 
-    private fun parseConfig(gradleFile: Path, fileContent: String): GradleAndroidConfig? {
-        val androidPluginType = detectAndroidPluginType(fileContent)
+    private fun parseConfig(
+        gradleFile: Path,
+        fileContent: String,
+        aliasResolver: PluginAliasResolver
+    ): GradleAndroidConfig? {
+        val androidPluginType = detectAndroidPluginType(fileContent, aliasResolver)
         val hasAndroidPlugin = androidPluginType != null
 
         if (!hasAndroidPlugin && !looksLikeAndroidGradleFile(fileContent)) {
@@ -121,26 +127,56 @@ class GradleAndroidConfigScanner {
         }
     }
 
-    private fun detectAndroidPluginType(fileContent: String): AndroidPluginType? {
+    private fun detectAndroidPluginType(
+        fileContent: String,
+        aliasResolver: PluginAliasResolver
+    ): AndroidPluginType? {
         val detectedTypes = fileContent
             .lineSequence()
             .map(String::trim)
             .filter(String::isNotBlank)
             .filterNot { line -> line.contains("apply false") }
-            .mapNotNull(::detectAndroidPluginTypeFromLine)
+            .mapNotNull { line -> detectAndroidPluginTypeFromLine(line, aliasResolver) }
             .toList()
 
         return detectedTypes.firstOrNull { pluginType -> pluginType != AndroidPluginType.UNKNOWN_ANDROID }
             ?: detectedTypes.firstOrNull()
     }
 
-    private fun detectAndroidPluginTypeFromLine(line: String): AndroidPluginType? {
+    private fun detectAndroidPluginTypeFromLine(
+        line: String,
+        aliasResolver: PluginAliasResolver
+    ): AndroidPluginType? {
         kotlinDslPluginPattern.find(line)?.groupValues?.getOrNull(1)?.let(::pluginTypeFromPluginId)?.let { return it }
         groovyDslPluginPattern.find(line)?.groupValues?.getOrNull(1)?.let(::pluginTypeFromPluginId)?.let { return it }
         applyPluginPattern.find(line)?.groupValues?.getOrNull(1)?.let(::pluginTypeFromPluginId)?.let { return it }
-        aliasFunctionPattern.find(line)?.groupValues?.getOrNull(1)?.let(::pluginTypeFromAlias)?.let { return it }
-        aliasPropertyPattern.find(line)?.groupValues?.getOrNull(1)?.let(::pluginTypeFromAlias)?.let { return it }
+        aliasFunctionPattern.find(line)?.groupValues?.getOrNull(1)
+            ?.let { accessor -> resolveAliasPluginType(accessor, aliasResolver) }
+            ?.let { return it }
+        aliasPropertyPattern.find(line)?.groupValues?.getOrNull(1)
+            ?.let { accessor -> resolveAliasPluginType(accessor, aliasResolver) }
+            ?.let { return it }
         return null
+    }
+
+    /**
+     * Resolves a `libs.plugins.<accessor>` reference to an Android plugin type.
+     *
+     * The standard Gradle version catalog at `gradle/libs.versions.toml` is consulted first: when it
+     * declares the alias, the real plugin id it maps to drives the classification (so an alias named
+     * `androidApplication` resolving to `com.android.application` is recognised as APPLICATION even though
+     * the accessor name itself does not contain `application`). When the catalog is missing or does not
+     * declare the alias, the previous accessor-name heuristic is used as a safe fallback.
+     */
+    private fun resolveAliasPluginType(
+        accessor: String,
+        aliasResolver: PluginAliasResolver
+    ): AndroidPluginType? {
+        val resolvedPluginId = aliasResolver.resolvePluginId(accessor)
+        if (resolvedPluginId != null) {
+            return pluginTypeFromPluginId(resolvedPluginId)
+        }
+        return pluginTypeFromAlias(accessor)
     }
 
     private fun pluginTypeFromPluginId(pluginId: String): AndroidPluginType? =
@@ -234,3 +270,103 @@ class GradleAndroidConfigScanner {
         return null
     }
 }
+
+/**
+ * Resolves a version catalog plugin accessor (the `<accessor>` in `libs.plugins.<accessor>`) to the
+ * plugin id it declares, or `null` when it cannot be resolved.
+ */
+private fun interface PluginAliasResolver {
+    fun resolvePluginId(accessor: String): String?
+}
+
+/**
+ * Lazily loads and caches `gradle/libs.versions.toml` plugin aliases per catalog file so that a single
+ * scan reads each catalog at most once. A malformed or unreadable catalog is treated as "no aliases"
+ * rather than failing the whole scan.
+ */
+private class PluginAliasCatalogs {
+
+    private val aliasesByCatalog = mutableMapOf<Path, Map<String, String>>()
+    private val catalogPathByStartDirectory = mutableMapOf<Path, Path?>()
+
+    fun resolverFor(gradleFile: Path): PluginAliasResolver {
+        val aliases = loadAliasesFor(gradleFile)
+        return PluginAliasResolver { accessor -> aliases[normalizePluginAliasKey(accessor)] }
+    }
+
+    private fun loadAliasesFor(gradleFile: Path): Map<String, String> {
+        val catalogPath = findCatalogPath(gradleFile) ?: return emptyMap()
+        return aliasesByCatalog.getOrPut(catalogPath) {
+            try {
+                parsePluginAliases(Files.readString(catalogPath))
+            } catch (_: Exception) {
+                emptyMap()
+            }
+        }
+    }
+
+    private fun findCatalogPath(gradleFile: Path): Path? {
+        val startDirectory = gradleFile.toAbsolutePath().normalize().parent ?: return null
+        return catalogPathByStartDirectory.getOrPut(startDirectory) {
+            var directory: Path? = startDirectory
+            while (directory != null) {
+                val candidate = directory.resolve("gradle").resolve("libs.versions.toml")
+                if (Files.isRegularFile(candidate)) {
+                    return@getOrPut candidate
+                }
+                directory = directory.parent
+            }
+            null
+        }
+    }
+}
+
+private val pluginSectionHeaderPattern = Regex("""^\s*\[\s*([^]]+?)\s*]\s*$""")
+private val pluginAliasKeyPattern = Regex("""^\s*([A-Za-z0-9_.-]+)\s*=""")
+private val pluginTableIdPattern = Regex("""\bid\s*=\s*["']([^"']+)["']""")
+private val pluginStringNotationPattern = Regex("""=\s*["']([^"']+)["']\s*$""")
+
+/**
+ * Parses the `[plugins]` table of a standard `libs.versions.toml`, returning a map from the
+ * separator-normalized alias key to the declared plugin id. Both the table notation
+ * (`{ id = "com.android.application", version.ref = "agp" }`) and the shorthand string notation
+ * (`"com.android.application:1.2.3"`) are supported.
+ */
+private fun parsePluginAliases(tomlContent: String): Map<String, String> {
+    val aliases = mutableMapOf<String, String>()
+    var inPluginsSection = false
+
+    tomlContent.lineSequence().forEach { rawLine ->
+        val line = rawLine.substringBefore('#')
+        val sectionHeader = pluginSectionHeaderPattern.find(line)
+        if (sectionHeader != null) {
+            inPluginsSection = sectionHeader.groupValues[1] == "plugins"
+            return@forEach
+        }
+        if (!inPluginsSection) {
+            return@forEach
+        }
+
+        val aliasKey = pluginAliasKeyPattern.find(line)?.groupValues?.getOrNull(1) ?: return@forEach
+        val pluginId = extractPluginId(line) ?: return@forEach
+        aliases[normalizePluginAliasKey(aliasKey)] = pluginId
+    }
+
+    return aliases
+}
+
+private fun extractPluginId(line: String): String? {
+    pluginTableIdPattern.find(line)?.groupValues?.getOrNull(1)?.let { return it }
+    pluginStringNotationPattern.find(line)?.groupValues?.getOrNull(1)?.let { return it.substringBefore(':') }
+    return null
+}
+
+/**
+ * Normalizes an alias key or accessor path so that the catalog key and the `libs.plugins.<accessor>`
+ * reference compare equal. Gradle treats `-`, `_`, and `.` in catalog keys as accessor separators, so
+ * `android-application`, `android_application`, and the generated accessor `android.application` all
+ * map to the same normalized form. CamelCase keys such as `androidApplication` have no separator and
+ * are preserved as-is.
+ */
+private fun normalizePluginAliasKey(raw: String): String =
+    raw.trim().replace('-', '.').replace('_', '.')
