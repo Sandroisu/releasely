@@ -1,6 +1,7 @@
 package io.github.sandroisu.releasely
 
 import io.github.sandroisu.releasely.rules.ReleaseRuleEvaluator
+import io.github.sandroisu.releasely.scanners.manifrest.*
 import java.nio.file.Path
 
 data class ScanRequest(

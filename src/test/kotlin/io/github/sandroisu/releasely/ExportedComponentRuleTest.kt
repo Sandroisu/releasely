@@ -3,6 +3,8 @@ package io.github.sandroisu.releasely
 import io.github.sandroisu.releasely.rules.ExportedComponentRule
 import io.github.sandroisu.releasely.rules.ReleaseRule
 import io.github.sandroisu.releasely.rules.ReleaseRuleContext
+import io.github.sandroisu.releasely.scanners.manifrest.ManifestComponent
+import io.github.sandroisu.releasely.scanners.manifrest.ManifestComponentType
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals

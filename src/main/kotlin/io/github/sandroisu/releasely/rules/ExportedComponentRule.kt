@@ -1,6 +1,8 @@
 package io.github.sandroisu.releasely.rules
 
 import io.github.sandroisu.releasely.*
+import io.github.sandroisu.releasely.scanners.manifrest.ManifestComponent
+import io.github.sandroisu.releasely.scanners.manifrest.ManifestComponentType
 
 class ExportedComponentRule : ReleaseRule {
 

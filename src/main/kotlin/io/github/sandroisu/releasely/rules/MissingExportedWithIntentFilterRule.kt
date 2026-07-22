@@ -1,7 +1,7 @@
 package io.github.sandroisu.releasely.rules
 
-import io.github.sandroisu.releasely.ManifestComponent
-import io.github.sandroisu.releasely.ManifestComponentType
+import io.github.sandroisu.releasely.scanners.manifrest.ManifestComponent
+import io.github.sandroisu.releasely.scanners.manifrest.ManifestComponentType
 import io.github.sandroisu.releasely.ReleaseFinding
 import io.github.sandroisu.releasely.ReleaseFindingSeverity
 

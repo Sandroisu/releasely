@@ -1,7 +1,7 @@
 package io.github.sandroisu.releasely.rules
 
 import io.github.sandroisu.releasely.GradleAndroidConfig
-import io.github.sandroisu.releasely.ManifestComponent
+import io.github.sandroisu.releasely.scanners.manifrest.ManifestComponent
 import io.github.sandroisu.releasely.ReleaseFinding
 import java.nio.file.Path
 

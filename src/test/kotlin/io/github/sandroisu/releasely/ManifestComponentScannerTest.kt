@@ -1,5 +1,8 @@
 package io.github.sandroisu.releasely
 
+import io.github.sandroisu.releasely.scanners.manifrest.ManifestComponent
+import io.github.sandroisu.releasely.scanners.manifrest.ManifestComponentScanner
+import io.github.sandroisu.releasely.scanners.manifrest.ManifestComponentType
 import java.nio.file.Files
 import kotlin.io.path.writeText
 import kotlin.test.Test

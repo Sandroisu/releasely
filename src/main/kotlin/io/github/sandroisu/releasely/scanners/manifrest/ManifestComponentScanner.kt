@@ -1,5 +1,6 @@
-package io.github.sandroisu.releasely
+package io.github.sandroisu.releasely.scanners.manifrest
 
+import io.github.sandroisu.releasely.secureDocumentBuilderFactory
 import org.w3c.dom.Element
 import java.nio.file.Files
 import java.nio.file.Path

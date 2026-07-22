@@ -1,4 +1,4 @@
-package io.github.sandroisu.releasely
+package io.github.sandroisu.releasely.scanners.manifrest
 
 import java.nio.file.Path
 

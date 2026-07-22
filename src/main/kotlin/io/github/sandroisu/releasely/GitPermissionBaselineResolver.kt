@@ -1,5 +1,6 @@
 package io.github.sandroisu.releasely
 
+import io.github.sandroisu.releasely.scanners.manifrest.ManifestPermissionScanner
 import java.nio.file.Path
 
 data class PermissionBaselineResult(
